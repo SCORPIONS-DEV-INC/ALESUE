@@ -1,0 +1,54 @@
+{
+    // Use IntelliSense para saber los atributos posibles.
+    // Mantenga el puntero para ver las descripciones de los existentes atributos.
+    // Para más información, visite: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "colegio",
+            "cwd": "home/rosales/AndroidStudioProjects/colegio",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "colegio (profile mode)",
+            "cwd": "home/rosales/AndroidStudioProjects/colegio",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "colegio (release mode)",
+            "cwd": "home/rosales/AndroidStudioProjects/colegio",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "flutter_application_1",
+            "cwd": "home/rosales/App-movil/flutter_application_1",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "flutter_application_1 (profile mode)",
+            "cwd": "home/rosales/App-movil/flutter_application_1",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "flutter_application_1 (release mode)",
+            "cwd": "home/rosales/App-movil/flutter_application_1",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "_macros",
+            "cwd": "opt/dart-sdk/pkg/_macros",
+            "request": "launch",
+            "type": "dart"
+        }
+    ]
+}
