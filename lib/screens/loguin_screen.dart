@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 // screens/login_screen.dart
-import 'package:aluxe/backend/db/aluxe_database.dart';
+import 'package:aluxe/backend/aluxe_database.dart';
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'registro_screen.dart';
