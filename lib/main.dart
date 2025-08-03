@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // main.dart
 
 import 'dart:ui';
@@ -38,6 +39,15 @@ extension on SingletonFlutterWindow {
   get platform => null;
 }
 
+=======
+import 'package:flutter/material.dart';
+import 'screens/loguin_screen.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+>>>>>>> origin/main
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -66,6 +76,10 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+<<<<<<< HEAD
+=======
+              // Logo
+>>>>>>> origin/main
               Container(
                 margin: const EdgeInsets.only(bottom: 32),
                 child: Image.asset(
@@ -75,6 +89,10 @@ class WelcomeScreen extends StatelessWidget {
                   fit: BoxFit.contain,
                 ),
               ),
+<<<<<<< HEAD
+=======
+              const SizedBox(height: 16),
+>>>>>>> origin/main
               const Text(
                 'Bienvenido Estudiante',
                 style: TextStyle(
@@ -88,7 +106,14 @@ class WelcomeScreen extends StatelessWidget {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
+<<<<<<< HEAD
                   padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+=======
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 16,
+                  ),
+>>>>>>> origin/main
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

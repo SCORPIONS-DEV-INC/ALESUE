@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 // screens/registro_screen.dart
 import 'package:aluxe/backend/db/aluxe_database.dart';
 import 'package:flutter/material.dart';
+=======
+import 'package:flutter/material.dart';
+import '../../backend/models/estudiante.dart';
+import '../../backend/db/database:helper.dart';
+>>>>>>> origin/main
 
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({super.key});
@@ -12,6 +18,7 @@ class RegistroScreen extends StatefulWidget {
 class _RegistroScreenState extends State<RegistroScreen> {
   final _nombreController = TextEditingController();
   final _apellidoController = TextEditingController();
+<<<<<<< HEAD
   final _dniController = TextEditingController();
   final _correoController = TextEditingController();
   final _edadController = TextEditingController();
@@ -46,15 +53,36 @@ class _RegistroScreenState extends State<RegistroScreen> {
     final grado = _gradoController.text.trim();
     final seccion = _seccionController.text.trim();
     final sexo = _sexoController.text.trim();
+=======
+  final _edadController = TextEditingController();
+  final _dniController = TextEditingController();
+  final _correoController = TextEditingController();
+  final _dbHelper = DatabaseHelper.instance();
+  bool _isLoading = false;
+  String? _error;
+
+  Future<void> _registrar() async {
+    final nombre = _nombreController.text.trim();
+    final apellido = _apellidoController.text.trim();
+    final edadStr = _edadController.text;
+    final dni = _dniController.text;
+    final correo = _correoController.text.trim();
+>>>>>>> origin/main
 
     // Validaciones
     if (nombre.isEmpty ||
         apellido.isEmpty ||
+<<<<<<< HEAD
         dni.isEmpty ||
         edadStr.isEmpty ||
         grado.isEmpty ||
         seccion.isEmpty ||
         sexo.isEmpty) {
+=======
+        edadStr.isEmpty ||
+        dni.isEmpty ||
+        correo.isEmpty) {
+>>>>>>> origin/main
       setState(() {
         _error = 'Todos los campos son obligatorios';
       });
@@ -68,7 +96,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
       return;
     }
 
+<<<<<<< HEAD
     if (correo.isNotEmpty && !correo.contains('@')) {
+=======
+    if (!correo.contains('@')) {
+>>>>>>> origin/main
       setState(() {
         _error = 'Correo inválido';
       });
@@ -78,9 +110,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
     int edad;
     try {
       edad = int.parse(edadStr);
+<<<<<<< HEAD
       if (edad < 5 || edad > 20) {
         setState(() {
           _error = 'Edad debe estar entre 5 y 20 años';
+=======
+      if (edad < 12 || edad > 100) {
+        setState(() {
+          _error = 'Edad debe estar entre 12 y 100';
+>>>>>>> origin/main
         });
         return;
       }
@@ -96,6 +134,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
       _error = null;
     });
 
+<<<<<<< HEAD
     // ID del colegio o tenant (puedes cambiarlo)
     const String tenantId = 'colegio_san_martin';
 
@@ -159,12 +198,40 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _gradoController.clear();
     _seccionController.clear();
     _sexoController.clear();
+=======
+    final nuevo = Estudiante(
+      nombre: nombre,
+      apellido: apellido,
+      edad: edad,
+      dni: dni,
+      correo: correo,
+      puesto: null, // Se asignará posteriormente
+      calificacion: null, // Se asignará posteriormente
+    );
+
+    final id = await _dbHelper.insertEstudiante(nuevo);
+    if (id == -1) {
+      setState(() {
+        _error = 'DNI o correo ya registrado';
+      });
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Registro exitoso')));
+      Navigator.pop(context); // Volver al login
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+>>>>>>> origin/main
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+<<<<<<< HEAD
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -173,6 +240,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
+=======
+>>>>>>> origin/main
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -180,7 +249,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+<<<<<<< HEAD
                 const SizedBox(height: 20),
+=======
+                const SizedBox(height: 40),
+>>>>>>> origin/main
                 const Text(
                   'aluxe app',
                   style: TextStyle(
@@ -200,6 +273,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+<<<<<<< HEAD
                 const SizedBox(height: 30),
 
                 // Nombre
@@ -226,6 +300,97 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
                 const SizedBox(height: 24),
 
+=======
+                const SizedBox(height: 40),
+                TextField(
+                  controller: _nombreController,
+                  decoration: InputDecoration(
+                    hintText: 'Nombre',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _apellidoController,
+                  decoration: InputDecoration(
+                    hintText: 'Apellido',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _edadController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: 'Edad',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _dniController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: 'DNI (8 dígitos)',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _correoController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    hintText: 'Correo electrónico',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+>>>>>>> origin/main
                 ElevatedButton(
                   onPressed: _isLoading ? null : _registrar,
                   style: ElevatedButton.styleFrom(
@@ -251,7 +416,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
                           style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
                 ),
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   Text(
@@ -260,9 +428,13 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ],
+<<<<<<< HEAD
 
                 const SizedBox(height: 16),
 
+=======
+                const SizedBox(height: 24),
+>>>>>>> origin/main
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text(
@@ -277,6 +449,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
       ),
     );
   }
+<<<<<<< HEAD
 
   Widget _buildTextField(
     TextEditingController controller,
@@ -304,6 +477,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
 }
 
 // Extensión para verificar si un String es solo numérico
+=======
+}
+
+>>>>>>> origin/main
 extension on String {
   bool get isNumericOnly => RegExp(r'^[0-9]+$').hasMatch(this);
 }
