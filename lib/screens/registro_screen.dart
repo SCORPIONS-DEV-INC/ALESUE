@@ -1,8 +1,6 @@
-// screens/registro_screen.dart
+import 'package:flutter/services.dart';
 import 'package:aluxe/backend/db/aluxe_database.dart';
 import 'package:flutter/material.dart';
-import '../../backend/models/estudiante.dart';
-import '../../backend/db/database:helper.dart';
 
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({super.key});
@@ -21,6 +19,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _seccionController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _sexoSeleccionado;
+  bool _mostrarPassword = false;
   final AluxeDatabase _db = AluxeDatabase.instance();
   bool _isLoading = false;
   String? _error;
@@ -101,52 +100,29 @@ class _RegistroScreenState extends State<RegistroScreen> {
     const String tenantId = 'colegio_san_martin';
 
     try {
-      // 1. Insertar en registro
-      await _db.insertRegistro({
-        'dni': dni,
-        'nombre': nombre,
-        'apellido': apellido,
-        'correo': correo,
-        'tenant_id': tenantId,
-      });
+      // Llama a la API del backend para registrar usuario (puedes adaptar los campos según tu backend)
+      final exito = await _db.registerUser(
+        username: nombre,
+        password: password,
+        role: 'estudiante',
+      );
 
-      // 2. Insertar en login (usuario = nombre, contraseña = password)
-      await _db.insertLogin({
-        'dni': dni,
-        'usuario': nombre,
-        'contraseña': password,
-        'tenant_id': tenantId,
-      });
-
-      // 3. Insertar en estudiante (clona nombre/apellido, añade detalles)
-      await _db.insertEstudiante({
-        'dni': dni,
-        'nombre': nombre,
-        'apellido': apellido,
-        'edad': edad,
-        'grado': grado,
-        'seccion': seccion,
-        'sexo': sexo,
-        'correo': correo,
-        'tenant_id': tenantId,
-      });
-
-      // ✅ Éxito
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('✅ Registro exitoso')));
-      _limpiarCampos();
-      Navigator.pop(context);
-    } on Exception catch (e) {
+      if (exito) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('✅ Registro exitoso')));
+        _limpiarCampos();
+        Navigator.pop(context);
+      } else {
+        setState(() {
+          _error =
+              'Error al registrar. Intenta con otro usuario o revisa los datos.';
+        });
+      }
+    } catch (e) {
       setState(() {
-        _isLoading = false;
-        if (e.toString().contains('UNIQUE constraint failed: registro.dni')) {
-          _error = 'El DNI ya está registrado.';
-        } else {
-          _error = 'Error al registrar';
-        }
+        _error = 'Error al registrar: $e';
       });
-      print('❌ Error en registro: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -190,7 +166,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 const SizedBox(height: 20),
                 const SizedBox(height: 40),
                 const Text(
-                  'aluxe app',
+                  'Aluxe App',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -211,50 +187,118 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 const SizedBox(height: 30),
 
                 // Nombre
-                _buildTextField(_nombreController, 'Nombre'),
+                _buildTextField(
+                  _nombreController,
+                  'Nombre',
+                  icon: Icons.person,
+                ),
                 const SizedBox(height: 16),
-                _buildTextField(_apellidoController, 'Apellido'),
+                _buildTextField(
+                  _apellidoController,
+                  'Apellido',
+                  icon: Icons.person_outline,
+                ),
                 const SizedBox(height: 16),
                 _buildTextField(
                   _dniController,
                   'DNI (8 dígitos)',
                   keyboardType: TextInputType.number,
+                  icon: Icons.badge,
+                  maxLength: 8,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(8),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
                   _correoController,
                   'Correo electrónico (opcional)',
                   keyboardType: TextInputType.emailAddress,
+                  icon: Icons.email,
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
                   _edadController,
                   'Edad',
                   keyboardType: TextInputType.number,
+                  icon: Icons.cake,
                 ),
                 const SizedBox(height: 16),
-                _buildTextField(_gradoController, 'Grado (ej: 3° Secundaria)'),
-                const SizedBox(height: 16),
-                _buildTextField(_seccionController, 'Sección (ej: A)'),
-                const SizedBox(height: 16),
-                // Campo contraseña
+                // Campo grado oculto, valor fijo
+                Builder(
+                  builder: (context) {
+                    _gradoController.text = '6° de primaria';
+                    return const SizedBox.shrink();
+                  },
+                ),
+                // ...existing code...
                 _buildTextField(
-                  _passwordController,
-                  'Contraseña',
-                  keyboardType: TextInputType.visiblePassword,
+                  _seccionController,
+                  'Sección (ej: A)',
+                  icon: Icons.class_,
                 ),
                 const SizedBox(height: 16),
-                // Campo sexo como dropdown
+                // Campo contraseña con mostrar/ocultar
+                TextField(
+                  controller: _passwordController,
+                  obscureText: !_mostrarPassword,
+                  keyboardType: TextInputType.visiblePassword,
+                  decoration: InputDecoration(
+                    hintText: 'Contraseña',
+                    prefixIcon: const Icon(
+                      Icons.lock_outline,
+                      color: Colors.grey,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _mostrarPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _mostrarPassword = !_mostrarPassword;
+                        });
+                      },
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Campo sexo como dropdown mejorado
                 DropdownButtonFormField<String>(
                   value: _sexoSeleccionado,
                   items: const [
                     DropdownMenuItem(
                       value: 'Masculino',
-                      child: Text('Masculino'),
+                      child: Row(
+                        children: [
+                          Icon(Icons.male, color: Colors.blue),
+                          SizedBox(width: 8),
+                          Text('Masculino'),
+                        ],
+                      ),
                     ),
                     DropdownMenuItem(
                       value: 'Femenino',
-                      child: Text('Femenino'),
+                      child: Row(
+                        children: [
+                          Icon(Icons.female, color: Colors.pink),
+                          SizedBox(width: 8),
+                          Text('Femenino'),
+                        ],
+                      ),
                     ),
                   ],
                   onChanged: (value) {
@@ -264,6 +308,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   },
                   decoration: InputDecoration(
                     hintText: 'Sexo',
+                    prefixIcon: const Icon(
+                      Icons.transgender,
+                      color: Colors.grey,
+                    ),
                     filled: true,
                     fillColor: Colors.grey[100],
                     border: OutlineInputBorder(
@@ -331,12 +379,18 @@ class _RegistroScreenState extends State<RegistroScreen> {
     TextEditingController controller,
     String hintText, {
     TextInputType? keyboardType,
+    IconData? icon,
+    int? maxLength,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      maxLength: maxLength,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         hintText: hintText,
+        prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
         filled: true,
         fillColor: Colors.grey[100],
         border: OutlineInputBorder(
@@ -347,6 +401,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
           horizontal: 16,
           vertical: 14,
         ),
+        counterText: '',
       ),
     );
   }

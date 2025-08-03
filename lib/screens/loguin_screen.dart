@@ -1,7 +1,7 @@
+import 'package:flutter/services.dart';
 // screens/login_screen.dart
 import 'package:aluxe/backend/db/aluxe_database.dart';
 import 'package:flutter/material.dart';
-import '../../backend/models/estudiante.dart';
 import 'home_screen.dart';
 import 'registro_screen.dart';
 
@@ -13,11 +13,10 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _usuarioController =
-      TextEditingController(); // Nombre (usuario)
-  final TextEditingController _dniController =
-      TextEditingController(); // DNI (contraseña)
+  final TextEditingController _usuarioController = TextEditingController();
+  final TextEditingController _dniController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _mostrarPassword = false;
   bool _isLoading = false;
   String? _error;
 
@@ -32,20 +31,12 @@ class _LoginScreenState extends State<LoginScreen> {
   /// Maneja el inicio de sesión
   Future<void> _login() async {
     final String usuario = _usuarioController.text.trim();
-    final String dni = _dniController.text.trim();
     final String password = _passwordController.text;
 
     // Validaciones
-    if (usuario.isEmpty || dni.isEmpty || password.isEmpty) {
+    if (usuario.isEmpty || password.isEmpty) {
       setState(() {
         _error = 'Por favor, completa todos los campos';
-      });
-      return;
-    }
-
-    if (dni.length != 8 || !dni.isNumericOnly) {
-      setState(() {
-        _error = 'El DNI debe tener 8 dígitos';
       });
       return;
     }
@@ -56,31 +47,28 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // 🔐 Autenticación: usuario = nombre, contraseña = password
-      final userData = await AluxeDatabase.instance().login(usuario, password);
+      // Llama a la API del backend para login
+      final token = await AluxeDatabase.instance().login(
+        username: usuario,
+        password: password,
+      );
 
-      if (userData != null) {
+      if (token != null) {
         // ✅ Login exitoso
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                HomeScreen(userData: userData, estudiante: null),
+            builder: (context) => HomeScreen(userData: {'token': token}),
           ),
         );
       } else {
         setState(() {
-          _error = 'Nombre o contraseña incorrectos';
+          _error = 'Usuario o contraseña incorrectos';
         });
       }
-    } on Exception catch (e) {
-      setState(() {
-        _error = 'Error al conectar con la base de datos';
-      });
-      print('❌ Error en login: $e');
     } catch (e) {
       setState(() {
-        _error = 'Error al iniciar sesión';
+        _error = 'Error al conectar con el servidor: $e';
       });
     } finally {
       setState(() {
@@ -102,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 40),
                 const Text(
-                  'aluxe app',
+                  'Aluxe App',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -153,6 +141,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextField(
                   controller: _dniController,
                   keyboardType: TextInputType.number,
+                  maxLength: 8,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(8),
+                  ],
                   decoration: InputDecoration(
                     hintText: 'DNI (8 dígitos)',
                     prefixIcon: const Icon(Icons.badge, color: Colors.grey),
@@ -166,17 +159,35 @@ class _LoginScreenState extends State<LoginScreen> {
                       horizontal: 16,
                       vertical: 14,
                     ),
+                    counterText: '',
                   ),
                   onSubmitted: (_) => _login(),
                 ),
                 const SizedBox(height: 16),
 
-                // Campo: Contraseña
+                // Campo: Contraseña con mostrar/ocultar
                 TextField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: !_mostrarPassword,
                   decoration: InputDecoration(
                     hintText: 'Contraseña',
+                    prefixIcon: const Icon(
+                      Icons.lock_outline,
+                      color: Colors.grey,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _mostrarPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _mostrarPassword = !_mostrarPassword;
+                        });
+                      },
+                    ),
                     filled: true,
                     fillColor: Colors.grey[100],
                     border: OutlineInputBorder(

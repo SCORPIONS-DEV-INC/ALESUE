@@ -1,29 +1,7 @@
-import 'package:aluxe/backend/db/aluxe_database.dart';
 import 'package:aluxe/screens/loguin_screen.dart';
 import 'package:flutter/material.dart';
-import 'dart:io' show Platform;
-// Importa sqflite_common_ffi solo si es escritorio
-// ignore: uri_does_not_exist
-import 'package:sqflite_common_ffi/sqflite_ffi.dart'
-    if (dart.library.html) 'dummy.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Inicializar sqflite_common_ffi solo en escritorio (Windows, Linux, macOS)
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
-
-  // Verificar conexión con la base de datos
-  try {
-    final db = await AluxeDatabase.instance().database;
-    print('✅ Base de datos lista: ${db.path}');
-  } catch (e) {
-    print('❌ Error con la base de datos: $e');
-  }
-
+void main() {
   runApp(const MyApp());
 }
 
@@ -74,7 +52,10 @@ class WelcomeScreen extends StatelessWidget {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 16,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
