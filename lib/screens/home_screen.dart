@@ -1,110 +1,121 @@
-<<<<<<< HEAD
-// screens/home_screen.dart
-import 'package:flutter/material.dart';
-
-class HomeScreen extends StatelessWidget {
-  // ✅ Recibe los datos del login (no un objeto Estudiante)
-  final Map<String, dynamic> userData;
-
-  const HomeScreen({super.key, required this.userData, required estudiante});
-
-  @override
-  Widget build(BuildContext context) {
-    // Asegúrate de que los datos no sean nulos
-    if (userData.isEmpty) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error, color: Colors.red, size: 60),
-              const SizedBox(height: 10),
-              const Text(
-                'Error: No se cargaron los datos',
-                style: TextStyle(fontSize: 16, color: Colors.red),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Volver'),
-              ),
-            ],
-          ),
-=======
 import 'package:flutter/material.dart';
 import '../../backend/models/estudiante.dart';
 
 class HomeScreen extends StatelessWidget {
-  final Estudiante? estudiante; // ← Ahora es nullable
+  // ✅ Recibe los datos del login (no un objeto Estudiante)
+  final Map<String, dynamic>? userData;
+  final Estudiante? estudiante;
 
-  const HomeScreen({super.key, required this.estudiante});
+  const HomeScreen({super.key, this.userData, this.estudiante});
 
   @override
   Widget build(BuildContext context) {
-    // Asegúrate de manejar el caso null
-    if (estudiante == null) {
+    // Si se pasa un estudiante, mostrar datos del estudiante
+    if (estudiante != null) {
       return Scaffold(
+        appBar: AppBar(
+          title: const Text('Inicio'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+            ),
+          ],
+        ),
         body: Center(
-          child: Text('Error: No se encontró información del estudiante'),
->>>>>>> origin/main
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircleAvatar(
+                radius: 50,
+                child: Icon(Icons.person, size: 50),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Bienvenido, ${estudiante!.nombre} ${estudiante!.apellido}',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text('Edad: ${estudiante!.edad}'),
+              Text('DNI: ${estudiante!.dni}'),
+              Text('Correo: ${estudiante!.correo}'),
+            ],
+          ),
         ),
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Inicio'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/login');
-            },
+    // Si se pasa userData, mostrar datos del usuario
+    if (userData != null && userData!.isNotEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Inicio'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+            ),
+          ],
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircleAvatar(
+                radius: 50,
+                child: Icon(Icons.person, size: 50),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Bienvenido, ${userData!['nombre']} ${userData!['apellido']}',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _buildInfoRow('Edad', userData!['edad'].toString()),
+              _buildInfoRow('DNI', userData!['dni']),
+              _buildInfoRow('Grado', userData!['grado']),
+              _buildInfoRow('Sección', userData!['seccion']),
+              _buildInfoRow('Sexo', userData!['sexo']),
+              if (userData!['correo'] != null)
+                _buildInfoRow('Correo', userData!['correo']),
+            ],
           ),
-        ],
-      ),
+        ),
+      );
+    }
+
+    // Si no hay datos, mostrar error
+    return Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-<<<<<<< HEAD
-            // Perfil
-            const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
-            const SizedBox(height: 20),
-
-            // Nombre completo
-            Text(
-              'Bienvenido, ${userData['nombre']} ${userData['apellido']}',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const Icon(Icons.error, color: Colors.red, size: 60),
             const SizedBox(height: 10),
-
-            // Datos del estudiante
-            _buildInfoRow('Edad', userData['edad'].toString()),
-            _buildInfoRow('DNI', userData['dni']),
-            _buildInfoRow('Grado', userData['grado']),
-            _buildInfoRow('Sección', userData['seccion']),
-            _buildInfoRow('Sexo', userData['sexo']),
-            if (userData['correo'] != null)
-              _buildInfoRow('Correo', userData['correo']),
-=======
-            const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
-            const SizedBox(height: 20),
-            Text(
-              'Bienvenido, ${estudiante!.nombre} ${estudiante!.apellido}',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            const Text(
+              'Error: No se cargaron los datos',
+              style: TextStyle(fontSize: 16, color: Colors.red),
             ),
-            const SizedBox(height: 10),
-            Text('Edad: ${estudiante!.edad}'),
-            Text('DNI: ${estudiante!.dni}'),
-            Text('Correo: ${estudiante!.correo}'),
->>>>>>> origin/main
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Volver'),
+            ),
           ],
         ),
       ),
     );
   }
-<<<<<<< HEAD
 
   // Widget reutilizable para mostrar datos
   Widget _buildInfoRow(String label, String value) {
@@ -119,6 +130,4 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-=======
->>>>>>> origin/main
 }

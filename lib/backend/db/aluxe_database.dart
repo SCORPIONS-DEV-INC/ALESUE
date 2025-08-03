@@ -18,7 +18,13 @@ class AluxeDatabase {
 
   Future<Database> _initDatabase() async {
     final path = join(await getDatabasesPath(), 'aluxe.db');
-    return await openDatabase(path, version: 1, onCreate: _onCreate);
+    // Cambia la versión a 2 para activar la migración
+    return await openDatabase(
+      path,
+      version: 2,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -52,10 +58,21 @@ class AluxeDatabase {
         grado TEXT NOT NULL,
         seccion TEXT NOT NULL,
         sexo TEXT NOT NULL,
+        correo TEXT,
         tenant_id TEXT NOT NULL DEFAULT 'default',
         FOREIGN KEY (dni) REFERENCES registro(dni) ON DELETE CASCADE
       )
     ''');
+  }
+
+  // Migración de la base de datos (v1 -> v2)
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Añadir columna 'correo' si no existe en 'estudiante'
+      await db.execute('''
+        ALTER TABLE estudiante ADD COLUMN correo TEXT;
+      ''');
+    }
   }
 
   // --- Operaciones ---

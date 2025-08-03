@@ -1,25 +1,22 @@
-<<<<<<< HEAD
-// main.dart
-
-import 'dart:ui';
-
 import 'package:aluxe/backend/db/aluxe_database.dart';
-
 import 'package:aluxe/screens/loguin_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // Para escritorio
+import 'dart:io' show Platform;
+// Importa sqflite_common_ffi solo si es escritorio
+// ignore: uri_does_not_exist
+import 'package:sqflite_common_ffi/sqflite_ffi.dart'
+    if (dart.library.html) 'dummy.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔥 Inicializar sqflite para escritorio
-  if (!isMobile()) {
+  // Inicializar sqflite_common_ffi solo en escritorio (Windows, Linux, macOS)
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
 
-  // ✅ Verificar conexión con la base de datos
+  // Verificar conexión con la base de datos
   try {
     final db = await AluxeDatabase.instance().database;
     print('✅ Base de datos lista: ${db.path}');
@@ -30,24 +27,6 @@ void main() async {
   runApp(const MyApp());
 }
 
-bool isMobile() {
-  final platform = WidgetsBinding.instance.window.platform;
-  return platform == TargetPlatform.android || platform == TargetPlatform.iOS;
-}
-
-extension on SingletonFlutterWindow {
-  get platform => null;
-}
-
-=======
-import 'package:flutter/material.dart';
-import 'screens/loguin_screen.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
->>>>>>> origin/main
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -76,23 +55,12 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-<<<<<<< HEAD
-=======
               // Logo
->>>>>>> origin/main
               Container(
                 margin: const EdgeInsets.only(bottom: 32),
-                child: Image.asset(
-                  'assets/logo.png',
-                  width: 220,
-                  height: 220,
-                  fit: BoxFit.contain,
-                ),
+                child: Image.asset('assets/logo.png', width: 220, height: 220),
               ),
-<<<<<<< HEAD
-=======
               const SizedBox(height: 16),
->>>>>>> origin/main
               const Text(
                 'Bienvenido Estudiante',
                 style: TextStyle(
@@ -106,14 +74,7 @@ class WelcomeScreen extends StatelessWidget {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
-<<<<<<< HEAD
                   padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-=======
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 48,
-                    vertical: 16,
-                  ),
->>>>>>> origin/main
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
