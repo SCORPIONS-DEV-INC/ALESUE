@@ -1,0 +1,35 @@
+{
+    "name": "aluxe",
+    "short_name": "aluxe",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#0175C2",
+    "theme_color": "#0175C2",
+    "description": "El ‘SISTEMA ESTUDIANTIL’ esta diseñado para estudiantes del 6º grado de primaria, con un grupo de 30 alumnos. El sistema tiene como objetivo monitorear y mejorar el rendimiento académico de los estudiantes, utilizando una escala numérica del 1 al 30 y estableciendo una calificación por méritos ( del 1ro al 5to puesto). La aplicación será de uso exclusivo en dispositivos móviles llamada “ ALUXE “ y promoverá la interacción directa entre docente y estudiantes. Su implementación busca incentivar el compromiso académico, la participación activa y el mejoramiento continuo en las actividades escolares, en la institución Nº 058”SIFREDO SUÑIGA QUINTOS”, con lugar de residencia en Zorritos, Tumbes.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
