@@ -19,7 +19,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _edadController = TextEditingController();
   final _gradoController = TextEditingController();
   final _seccionController = TextEditingController();
-  final _sexoController = TextEditingController();
+  final _passwordController = TextEditingController();
+  String? _sexoSeleccionado;
   final AluxeDatabase _db = AluxeDatabase.instance();
   bool _isLoading = false;
   String? _error;
@@ -33,7 +34,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _edadController.dispose();
     _gradoController.dispose();
     _seccionController.dispose();
-    _sexoController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -45,7 +46,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
     final edadStr = _edadController.text.trim();
     final grado = _gradoController.text.trim();
     final seccion = _seccionController.text.trim();
-    final sexo = _sexoController.text.trim();
+    final password = _passwordController.text.trim();
+    final sexo = _sexoSeleccionado ?? '';
     // Validaciones
     if (nombre.isEmpty ||
         apellido.isEmpty ||
@@ -53,7 +55,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
         edadStr.isEmpty ||
         grado.isEmpty ||
         seccion.isEmpty ||
-        sexo.isEmpty) {
+        sexo.isEmpty ||
+        password.isEmpty) {
       setState(() {
         _error = 'Todos los campos son obligatorios';
       });
@@ -107,11 +110,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
         'tenant_id': tenantId,
       });
 
-      // 2. Insertar en login (usuario = nombre, contraseña = dni)
+      // 2. Insertar en login (usuario = nombre, contraseña = password)
       await _db.insertLogin({
         'dni': dni,
         'usuario': nombre,
-        'contraseña': dni,
+        'contraseña': password,
         'tenant_id': tenantId,
       });
 
@@ -137,7 +140,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
     } on Exception catch (e) {
       setState(() {
         _isLoading = false;
-        _error = 'Error al registrar';
+        if (e.toString().contains('UNIQUE constraint failed: registro.dni')) {
+          _error = 'El DNI ya está registrado.';
+        } else {
+          _error = 'Error al registrar';
+        }
       });
       print('❌ Error en registro: $e');
     } finally {
@@ -157,7 +164,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _edadController.clear();
     _gradoController.clear();
     _seccionController.clear();
-    _sexoController.clear();
+    _passwordController.clear();
+    _sexoSeleccionado = null;
   }
 
   @override
@@ -229,7 +237,45 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 const SizedBox(height: 16),
                 _buildTextField(_seccionController, 'Sección (ej: A)'),
                 const SizedBox(height: 16),
-                _buildTextField(_sexoController, 'Sexo (Masculino/Femenino)'),
+                // Campo contraseña
+                _buildTextField(
+                  _passwordController,
+                  'Contraseña',
+                  keyboardType: TextInputType.visiblePassword,
+                ),
+                const SizedBox(height: 16),
+                // Campo sexo como dropdown
+                DropdownButtonFormField<String>(
+                  value: _sexoSeleccionado,
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Masculino',
+                      child: Text('Masculino'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Femenino',
+                      child: Text('Femenino'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _sexoSeleccionado = value;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Sexo',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _registrar,

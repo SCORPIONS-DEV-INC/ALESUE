@@ -56,8 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // 🔐 Autenticación: usuario = nombre, contraseña = dni
-      final userData = await AluxeDatabase.instance().login(usuario, dni);
+      // 🔐 Autenticación: usuario = nombre, contraseña = password
+      final userData = await AluxeDatabase.instance().login(usuario, password);
 
       if (userData != null) {
         // ✅ Login exitoso
@@ -69,34 +69,9 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       } else {
-        // Aquí iría la lógica de autenticación real con la base de datos
-        await Future.delayed(const Duration(seconds: 1)); // Simulación
-
-        // Por ahora, simulamos una validación simple
-        if (dni == '12345678' && password == 'password123') {
-          // Ejemplo de estudiante para pruebas
-          final estudiante = Estudiante(
-            nombre: 'Juan',
-            apellido: 'Pérez',
-            edad: 12,
-            dni: dni,
-            correo: 'juan@example.com',
-            grado: '3°',
-            seccion: 'A',
-            sexo: 'Masculino',
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(estudiante: estudiante),
-            ),
-          );
-        } else {
-          setState(() {
-            _error = 'Nombre o DNI incorrectos';
-          });
-        }
+        setState(() {
+          _error = 'Nombre o contraseña incorrectos';
+        });
       }
     } on Exception catch (e) {
       setState(() {
