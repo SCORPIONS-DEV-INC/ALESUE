@@ -10,7 +10,10 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="API para Estudiantes del Colegio",
     description="API REST usando FastAPI y PostgreSQL para gestión escolar",
-    version="1.0.0"
+    version="1.0.0",
+    developers=["Adrian Ruiz <adrianalejandroruiz19@gmail.com>",
+                "Luis Abad <rluisabad@gmail.com>",
+                "Diogo Sandoval <diogo.sandoval@gmail.com>"]
 )
 
 # ✅ Configurar CORS para permitir peticiones desde Flutter u otros orígenes

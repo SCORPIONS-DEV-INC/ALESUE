@@ -9,23 +9,35 @@ class AluxeDatabase {
   AluxeDatabase._init();
   factory AluxeDatabase.instance() => _instance;
 
-  /// Registro de usuario (llama a /register del backend)
-  Future<bool> registerUser({
-    required String username,
-    required String password,
-    String role = 'estudiante', // Por defecto estudiante
+  /// Registro de estudiante (llama a /estudiantes del backend)
+  Future<bool> registerEstudiante({
+    required String dni,
+    required String nombre,
+    required String apellido,
+    required int edad,
+    required String grado,
+    required String seccion,
+    required String sexo,
+    required String correo,
+    required String tenantId,
   }) async {
-    final url = Uri.parse('$baseUrl/register');
+    final url = Uri.parse('${baseUrl}estudiantes/');
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'username': username,
-        'password': password,
-        'role': role,
+        'dni': dni,
+        'nombre': nombre,
+        'apellido': apellido,
+        'edad': edad,
+        'grado': grado,
+        'seccion': seccion,
+        'sexo': sexo,
+        'correo': correo,
+        'tenant_id': tenantId,
       }),
     );
-    return response.statusCode == 200;
+    return response.statusCode == 200 || response.statusCode == 201;
   }
 
   // Login (llama a /login del backend)
@@ -45,6 +57,4 @@ class AluxeDatabase {
     }
     return null;
   }
-
-  // Puedes agregar más métodos para retos, estudiantes, etc.
 }

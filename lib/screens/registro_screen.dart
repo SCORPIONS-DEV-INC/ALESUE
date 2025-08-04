@@ -100,11 +100,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
     const String tenantId = 'colegio_san_martin';
 
     try {
-      // Llama a la API del backend para registrar usuario (puedes adaptar los campos según tu backend)
-      final exito = await _db.registerUser(
-        username: nombre,
-        password: password,
-        role: 'estudiante',
+      // Llama a la API del backend para registrar estudiante
+      final exito = await _db.registerEstudiante(
+        dni: dni,
+        nombre: nombre,
+        apellido: apellido,
+        edad: int.tryParse(edadStr) ?? 0,
+        grado: grado,
+        seccion: seccion,
+        sexo: sexo,
+        correo: correo,
+        tenantId: tenantId,
       );
 
       if (exito) {

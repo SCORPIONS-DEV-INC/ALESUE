@@ -10,7 +10,7 @@ class EstudianteBase(BaseModel):
     seccion: str
     sexo: str
     correo: str
-    tenant_id: Optional[str] = "default"
+    tenant_id: str  # Ahora es obligatorio
 
 class EstudianteCreate(EstudianteBase):
     pass
