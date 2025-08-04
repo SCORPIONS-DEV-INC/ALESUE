@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import estudiantes
 from app.database import Base, engine
-from app.models import estudiante  # <-- Importa el modelo aquí
+from app.models import estudiante  
 
 print("Creando tablas en la base de datos...")
 Base.metadata.create_all(bind=engine)

@@ -16,4 +16,9 @@ def crear_estudiante(estudiante: EstudianteCreate, db: Session = Depends(get_db)
 
 @router.get("/", response_model=list[EstudianteOut])
 def listar_estudiantes(db: Session = Depends(get_db)):
-    return db.query(models.Estudiante).all()
+    try:
+        estudiantes = db.query(models.Estudiante).all()
+        return estudiantes
+    except Exception as e:
+        print(f"[ERROR en /estudiantes GET]: {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {e}")
