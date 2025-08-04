@@ -9,6 +9,19 @@ class AluxeDatabase {
   AluxeDatabase._init();
   factory AluxeDatabase.instance() => _instance;
 
+  // Verificar estado del backend
+  Future<bool> checkBackendHealth() async {
+    try {
+      final url = Uri.parse('${baseUrl}');
+      final response = await http.get(url);
+      print('Backend health check: ${response.statusCode} - ${response.body}');
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Backend health check failed: $e');
+      return false;
+    }
+  }
+
   /// Registro de usuario (llama a /auth/register del backend)
   Future<Map<String, dynamic>?> registerUsuario({
     required String username,
@@ -158,6 +171,9 @@ class AluxeDatabase {
 
       print('Body del request: $requestBody');
       print('Token usado: ${token.substring(0, 20)}...');
+      print(
+        'Headers: Content-Type: application/json, Authorization: Bearer [TOKEN]',
+      );
 
       final response = await http.post(
         url,
@@ -169,6 +185,7 @@ class AluxeDatabase {
       );
 
       print('Status code: ${response.statusCode}');
+      print('Response headers: ${response.headers}');
       print('Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {

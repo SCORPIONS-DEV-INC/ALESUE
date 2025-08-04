@@ -12,4 +12,4 @@ class ProgresoReto(Base):
     puntos_obtenidos = Column(Integer, nullable=False, default=0)
     fecha_completado = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # Removido temporalmente: updated_at = Column(DateTime(timezone=True), onupdate=func.now())

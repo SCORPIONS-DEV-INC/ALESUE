@@ -85,7 +85,7 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
   }
 
   Future<void> _crearReto() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_formKey.currentState?.validate() != true) {
       return;
     }
 
