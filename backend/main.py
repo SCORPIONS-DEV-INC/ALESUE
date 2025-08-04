@@ -1,10 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.routers import estudiantes
 from app.database import Base, engine
+from app.models import estudiante  # <-- Importa el modelo aquí
 
-# ✅ Crea las tablas si no existen en la base de datos
+print("Creando tablas en la base de datos...")
 Base.metadata.create_all(bind=engine)
+print("¡Tablas creadas!")
 
 # ✅ Instancia de la app FastAPI
 app = FastAPI(
