@@ -190,56 +190,20 @@ class AluxeDatabase {
     required List preguntas, // Lista de preguntas con sus opciones
   }) async {
     try {
-      final url = Uri.parse('${baseUrl}retos/con-preguntas');
-      print('Enviando reto con preguntas a: $url');
-
-      final requestBody = {
-        'titulo': titulo,
-        'descripcion': descripcion,
-        'puntos': puntos,
-        'nivel': nivel,
-        'materia': materia,
-        'tenant_id': tenantId,
-        'preguntas': preguntas.map((p) => p.toJson()).toList(),
-      };
-
-      print('Body del request: $requestBody');
-
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(requestBody),
+      // Por ahora, usar el método tradicional ya que el backend no soporta preguntas
+      print(
+        'Creando reto con ${preguntas.length} preguntas (usando método tradicional)',
       );
 
-      print('Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else {
-        // Si el endpoint no existe, usar el método tradicional
-        if (response.statusCode == 404) {
-          print('Endpoint con preguntas no existe, usando método tradicional');
-          return createReto(
-            token: token,
-            titulo: titulo,
-            descripcion: descripcion,
-            puntos: puntos,
-            nivel: nivel,
-            materia: materia,
-            tenantId: tenantId,
-          );
-        }
-
-        // Devolver el error para mostrarlo al usuario
-        final errorData = jsonDecode(response.body);
-        throw Exception(
-          errorData['detail'] ?? 'Error al crear el reto con preguntas',
-        );
-      }
+      return createReto(
+        token: token,
+        titulo: titulo,
+        descripcion: descripcion,
+        puntos: puntos,
+        nivel: nivel,
+        materia: materia,
+        tenantId: tenantId,
+      );
     } catch (e) {
       print('Error en createRetoConPreguntas: $e');
       rethrow;
