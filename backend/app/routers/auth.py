@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List
 from app.database import get_db
 from app.models.usuario import Usuario
-from app.schemas.usuario import UsuarioCreate, UsuarioOut, UsuarioLogin, Token
-from app.auth import hash_password, authenticate_user, create_access_token
+from app.schemas.usuario import UsuarioCreate, UsuarioOut, UsuarioLogin, Token, EstudianteCreateByProfesor, RankingEstudiante
+from app.auth import hash_password, authenticate_user, create_access_token, get_current_profesor
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
@@ -87,3 +88,89 @@ def login(user_credentials: UsuarioLogin, db: Session = Depends(get_db)):
         "token_type": "bearer",
         "user_info": user
     }
+
+@router.post("/crear-estudiante", response_model=UsuarioOut)
+def crear_estudiante_por_profesor(
+    estudiante: EstudianteCreateByProfesor, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_profesor)
+):
+    """Permite a un profesor crear una cuenta de estudiante"""
+    
+    # Verificar si el DNI ya existe
+    if db.query(Usuario).filter(Usuario.dni == estudiante.dni).first():
+        raise HTTPException(
+            status_code=400,
+            detail="El DNI ya está registrado"
+        )
+    
+    # Verificar si el email ya existe
+    if db.query(Usuario).filter(Usuario.email == estudiante.email).first():
+        raise HTTPException(
+            status_code=400,
+            detail="El email ya está registrado"
+        )
+    
+    # Hashear la contraseña
+    password_hash = hash_password(estudiante.password)
+    
+    # Crear el estudiante
+    nuevo_estudiante = Usuario(
+        username=estudiante.dni,  # DNI como username
+        email=estudiante.email,
+        password_hash=password_hash,
+        rol="estudiante",
+        nombre=estudiante.nombre,
+        apellido=estudiante.apellido,
+        dni=estudiante.dni,
+        edad=estudiante.edad,
+        grado=estudiante.grado,
+        seccion=estudiante.seccion,
+        sexo=estudiante.sexo,
+        tenant_id=current_user.tenant_id  # Mismo tenant que el profesor
+    )
+    
+    db.add(nuevo_estudiante)
+    db.commit()
+    db.refresh(nuevo_estudiante)
+    
+    return nuevo_estudiante
+
+@router.get("/ranking", response_model=List[RankingEstudiante])
+def obtener_ranking(
+    materia: str = None,
+    grado: str = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_profesor)
+):
+    """Obtiene el ranking de estudiantes por puntos"""
+    
+    query = db.query(Usuario).filter(
+        Usuario.rol == "estudiante",
+        Usuario.tenant_id == current_user.tenant_id,
+        Usuario.activo == "true"
+    )
+    
+    if grado:
+        query = query.filter(Usuario.grado == grado)
+    
+    if materia:
+        # Ordenar por materia específica
+        if materia == "matematicas":
+            query = query.order_by(Usuario.puntos_matematicas.desc())
+        elif materia == "comunicacion":
+            query = query.order_by(Usuario.puntos_comunicacion.desc())
+        elif materia == "personal_social":
+            query = query.order_by(Usuario.puntos_personal_social.desc())
+        elif materia == "ciencia_tecnologia":
+            query = query.order_by(Usuario.puntos_ciencia_tecnologia.desc())
+        elif materia == "ingles":
+            query = query.order_by(Usuario.puntos_ingles.desc())
+        else:
+            query = query.order_by(Usuario.puntos_totales.desc())
+    else:
+        # Ordenar por puntos totales
+        query = query.order_by(Usuario.puntos_totales.desc())
+    
+    estudiantes = query.limit(20).all()  # Top 20
+    return estudiantes

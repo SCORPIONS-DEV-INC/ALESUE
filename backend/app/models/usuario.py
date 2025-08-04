@@ -18,11 +18,18 @@ class Usuario(Base):
     rol = Column(Enum(RolEnum), nullable=False, default=RolEnum.ESTUDIANTE)
     nombre = Column(String, nullable=False)
     apellido = Column(String, nullable=False)
-    dni = Column(String, unique=True, nullable=True)  # Solo para estudiantes
+    dni = Column(String, unique=True, nullable=False)  # Obligatorio para todos los usuarios
     edad = Column(Integer, nullable=True)  # Solo para estudiantes
     grado = Column(String, nullable=True)  # Solo para estudiantes
     seccion = Column(String, nullable=True)  # Solo para estudiantes
     sexo = Column(String, nullable=True)
+    # Campos para puntuación por materia
+    puntos_matematicas = Column(Integer, nullable=False, default=0)
+    puntos_comunicacion = Column(Integer, nullable=False, default=0)
+    puntos_personal_social = Column(Integer, nullable=False, default=0)
+    puntos_ciencia_tecnologia = Column(Integer, nullable=False, default=0)
+    puntos_ingles = Column(Integer, nullable=False, default=0)
+    puntos_totales = Column(Integer, nullable=False, default=0)
     activo = Column(String, nullable=False, default="true")
     tenant_id = Column(String, nullable=False, default="default")
     created_at = Column(DateTime(timezone=True), server_default=func.now())

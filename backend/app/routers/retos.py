@@ -4,8 +4,10 @@ from typing import List
 from app.database import get_db
 from app.models.reto import Reto
 from app.models.usuario import Usuario
-from app.schemas.reto import RetoCreate, RetoOut
-from app.auth import get_current_profesor, get_current_active_user
+from app.models.progreso_reto import ProgresoReto
+from app.schemas.reto import RetoCreate, RetoOut, CompletarReto, ProgresoRetoOut
+from app.auth import get_current_profesor, get_current_active_user, get_current_estudiante
+from sqlalchemy.sql import func
 
 router = APIRouter(prefix="/retos", tags=["Retos"])
 
@@ -111,3 +113,90 @@ def eliminar_reto(
     db.commit()
     
     return {"message": "Reto eliminado exitosamente"}
+
+@router.post("/completar", response_model=ProgresoRetoOut)
+def completar_reto(
+    datos: CompletarReto,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_estudiante)
+):
+    """Permite a un estudiante completar un reto"""
+    
+    # Verificar que el reto existe
+    reto = db.query(Reto).filter(Reto.id == datos.reto_id, Reto.activo == "true").first()
+    if not reto:
+        raise HTTPException(status_code=404, detail="Reto no encontrado")
+    
+    # Verificar si ya completó este reto
+    progreso_existente = db.query(ProgresoReto).filter(
+        ProgresoReto.estudiante_id == current_user.id,
+        ProgresoReto.reto_id == datos.reto_id
+    ).first()
+    
+    if progreso_existente and progreso_existente.completado == "true":
+        raise HTTPException(status_code=400, detail="Ya completaste este reto")
+    
+    # Crear o actualizar progreso
+    if progreso_existente:
+        progreso_existente.completado = "true"
+        progreso_existente.puntos_obtenidos = datos.puntos_obtenidos
+        progreso_existente.fecha_completado = func.now()
+        progreso = progreso_existente
+    else:
+        progreso = ProgresoReto(
+            estudiante_id=current_user.id,
+            reto_id=datos.reto_id,
+            completado="true",
+            puntos_obtenidos=datos.puntos_obtenidos,
+            fecha_completado=func.now()
+        )
+        db.add(progreso)
+    
+    # Actualizar puntos del estudiante según la materia
+    if reto.materia.value == "matematicas":
+        current_user.puntos_matematicas += datos.puntos_obtenidos
+    elif reto.materia.value == "comunicacion":
+        current_user.puntos_comunicacion += datos.puntos_obtenidos
+    elif reto.materia.value == "personal_social":
+        current_user.puntos_personal_social += datos.puntos_obtenidos
+    elif reto.materia.value == "ciencia_tecnologia":
+        current_user.puntos_ciencia_tecnologia += datos.puntos_obtenidos
+    elif reto.materia.value == "ingles":
+        current_user.puntos_ingles += datos.puntos_obtenidos
+    
+    # Actualizar puntos totales
+    current_user.puntos_totales += datos.puntos_obtenidos
+    
+    db.commit()
+    db.refresh(progreso)
+    
+    return progreso
+
+@router.get("/mi-progreso", response_model=List[ProgresoRetoOut])
+def obtener_mi_progreso(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_estudiante)
+):
+    """Obtiene el progreso del estudiante actual"""
+    
+    progreso = db.query(ProgresoReto).filter(
+        ProgresoReto.estudiante_id == current_user.id
+    ).all()
+    
+    return progreso
+
+@router.get("/por-materia/{materia}", response_model=List[RetoOut])
+def listar_retos_por_materia(
+    materia: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
+    """Lista retos filtrados por materia"""
+    
+    retos = db.query(Reto).filter(
+        Reto.activo == "true",
+        Reto.tenant_id == current_user.tenant_id,
+        Reto.materia == materia
+    ).all()
+    
+    return retos

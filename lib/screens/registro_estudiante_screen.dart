@@ -11,7 +11,6 @@ class RegistroEstudianteScreen extends StatefulWidget {
 }
 
 class _RegistroEstudianteScreenState extends State<RegistroEstudianteScreen> {
-  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nombreController = TextEditingController();
@@ -28,7 +27,6 @@ class _RegistroEstudianteScreenState extends State<RegistroEstudianteScreen> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _nombreController.dispose();
@@ -41,8 +39,6 @@ class _RegistroEstudianteScreenState extends State<RegistroEstudianteScreen> {
   }
 
   Future<void> _registrar() async {
-    final username = _usernameController.text.trim();
-    final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final nombre = _nombreController.text.trim();
     final apellido = _apellidoController.text.trim();
@@ -51,18 +47,18 @@ class _RegistroEstudianteScreenState extends State<RegistroEstudianteScreen> {
     final grado = _gradoController.text.trim();
     final seccion = _seccionController.text.trim();
     final sexo = _sexoSeleccionado ?? '';
+    final email = _emailController.text.trim();
 
     // Validaciones
-    if (username.isEmpty ||
-        email.isEmpty ||
-        password.isEmpty ||
+    if (password.isEmpty ||
         nombre.isEmpty ||
         apellido.isEmpty ||
         dni.isEmpty ||
         edadStr.isEmpty ||
         grado.isEmpty ||
         seccion.isEmpty ||
-        sexo.isEmpty) {
+        sexo.isEmpty ||
+        email.isEmpty) {
       setState(() {
         _error = 'Todos los campos son obligatorios';
       });
@@ -105,9 +101,9 @@ class _RegistroEstudianteScreenState extends State<RegistroEstudianteScreen> {
     });
 
     try {
-      // Llamar a la nueva API de registro
+      // Llamar a la nueva API de registro usando DNI como username
       await _db.registerUsuario(
-        username: username,
+        username: dni, // DNI como username
         email: email,
         password: password,
         nombre: nombre,
@@ -140,7 +136,6 @@ class _RegistroEstudianteScreenState extends State<RegistroEstudianteScreen> {
   }
 
   void _limpiarCampos() {
-    _usernameController.clear();
     _emailController.clear();
     _passwordController.clear();
     _nombreController.clear();
@@ -182,14 +177,6 @@ class _RegistroEstudianteScreenState extends State<RegistroEstudianteScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 30),
-
-                // Username
-                _buildTextField(
-                  _usernameController,
-                  'Nombre de usuario',
-                  icon: Icons.account_circle,
-                ),
-                const SizedBox(height: 16),
 
                 // Email
                 _buildTextField(

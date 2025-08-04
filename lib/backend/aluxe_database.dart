@@ -64,12 +64,15 @@ class AluxeDatabase {
     required String sexo,
     required String correo,
     required String tenantId,
+    String? password, // Hacer password opcional
   }) async {
     try {
       final result = await registerUsuario(
         username: dni, // Usar DNI como username para estudiantes
         email: correo,
-        password: "123456", // Password por defecto (cambiar luego)
+        password:
+            password ??
+            "estudiante123", // Password por defecto si no se proporciona
         nombre: nombre,
         apellido: apellido,
         rol: "estudiante",
@@ -156,5 +159,140 @@ class AluxeDatabase {
       return jsonDecode(response.body);
     }
     return null;
+  }
+
+  // Crear estudiante (solo profesores)
+  Future<Map<String, dynamic>?> createEstudianteByProfesor({
+    required String token,
+    required String dni,
+    required String nombre,
+    required String apellido,
+    required int edad,
+    required String grado,
+    required String seccion,
+    required String sexo,
+    required String email,
+    required String password,
+    required String tenantId,
+  }) async {
+    final url = Uri.parse('${baseUrl}auth/crear-estudiante');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'dni': dni,
+        'nombre': nombre,
+        'apellido': apellido,
+        'edad': edad,
+        'grado': grado,
+        'seccion': seccion,
+        'sexo': sexo,
+        'email': email,
+        'password': password,
+        'tenant_id': tenantId,
+      }),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['detail'] ?? 'Error al crear estudiante');
+    }
+  }
+
+  // Completar reto (solo estudiantes)
+  Future<bool> completarReto({
+    required String token,
+    required int retoId,
+    required int puntosObtenidos,
+  }) async {
+    final url = Uri.parse('${baseUrl}retos/completar');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'reto_id': retoId,
+        'puntos_obtenidos': puntosObtenidos,
+      }),
+    );
+
+    return response.statusCode == 200 || response.statusCode == 201;
+  }
+
+  // Obtener ranking
+  Future<List<Map<String, dynamic>>> getRanking({
+    required String token,
+    String? materia,
+    String? grado,
+  }) async {
+    String url = '${baseUrl}auth/ranking';
+    List<String> params = [];
+
+    if (materia != null) params.add('materia=$materia');
+    if (grado != null) params.add('grado=$grado');
+
+    if (params.isNotEmpty) {
+      url += '?${params.join('&')}';
+    }
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
+
+  // Obtener retos por materia
+  Future<List<Map<String, dynamic>>> getRetosByMateria({
+    required String token,
+    required String materia,
+  }) async {
+    final url = Uri.parse('${baseUrl}retos/por-materia/$materia');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
+
+  // Obtener mi progreso (estudiantes)
+  Future<List<Map<String, dynamic>>> getMiProgreso(String token) async {
+    final url = Uri.parse('${baseUrl}retos/mi-progreso');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    }
+    return [];
   }
 }

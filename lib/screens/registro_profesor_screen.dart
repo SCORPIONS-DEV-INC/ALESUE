@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:aluxe/backend/aluxe_database.dart';
 
 class RegistroProfesorScreen extends StatefulWidget {
@@ -9,7 +10,7 @@ class RegistroProfesorScreen extends StatefulWidget {
 }
 
 class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
-  final _usernameController = TextEditingController();
+  final _dniController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nombreController = TextEditingController();
@@ -22,7 +23,7 @@ class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _dniController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _nombreController.dispose();
@@ -31,7 +32,7 @@ class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
   }
 
   Future<void> _registrar() async {
-    final username = _usernameController.text.trim();
+    final dni = _dniController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final nombre = _nombreController.text.trim();
@@ -39,7 +40,7 @@ class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
     final sexo = _sexoSeleccionado ?? '';
 
     // Validaciones
-    if (username.isEmpty ||
+    if (dni.isEmpty ||
         email.isEmpty ||
         password.isEmpty ||
         nombre.isEmpty ||
@@ -47,6 +48,13 @@ class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
         sexo.isEmpty) {
       setState(() {
         _error = 'Todos los campos son obligatorios';
+      });
+      return;
+    }
+
+    if (dni.length != 8 || !dni.isNumericOnly) {
+      setState(() {
+        _error = 'El DNI debe tener exactamente 8 dígitos';
       });
       return;
     }
@@ -71,14 +79,15 @@ class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
     });
 
     try {
-      // Llamar a la nueva API de registro
+      // Llamar a la nueva API de registro usando DNI como username
       await _db.registerUsuario(
-        username: username,
+        username: dni, // DNI como username
         email: email,
         password: password,
         nombre: nombre,
         apellido: apellido,
         rol: "profesor",
+        dni: dni, // Asignar DNI también al campo dni
         sexo: sexo,
         tenantId: "colegio_san_martin",
       );
@@ -102,7 +111,7 @@ class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
   }
 
   void _limpiarCampos() {
-    _usernameController.clear();
+    _dniController.clear();
     _emailController.clear();
     _passwordController.clear();
     _nombreController.clear();
@@ -147,11 +156,30 @@ class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
                 ),
                 const SizedBox(height: 30),
 
-                // Username
-                _buildTextField(
-                  _usernameController,
-                  'Nombre de usuario',
-                  icon: Icons.account_circle,
+                // DNI
+                TextField(
+                  controller: _dniController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 8,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(8),
+                  ],
+                  decoration: InputDecoration(
+                    hintText: 'DNI (8 dígitos)',
+                    prefixIcon: const Icon(Icons.badge, color: Colors.grey),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    counterText: '',
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -326,7 +354,7 @@ class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        '• Crear retos y actividades\n• Ver el progreso de estudiantes\n• Gestionar contenido educativo',
+                        '• Crear retos y actividades\n• Ver el progreso de estudiantes\n• Gestionar contenido educativo\n• Acceder con tu DNI y contraseña',
                         style: TextStyle(color: Colors.green, fontSize: 12),
                         textAlign: TextAlign.center,
                       ),
@@ -375,4 +403,9 @@ class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
       ),
     );
   }
+}
+
+// Extensión para verificar si un String es solo numérico
+extension IsNumericOnly on String {
+  bool get isNumericOnly => RegExp(r'^[0-9]+$').hasMatch(this);
 }
