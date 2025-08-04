@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 
+
 class EstudianteBase(BaseModel):
     dni: str
     nombre: str
@@ -10,6 +11,7 @@ class EstudianteBase(BaseModel):
     seccion: str
     sexo: str
     correo: str
+    password: str
     tenant_id: str  # Ahora es obligatorio
 
 class EstudianteCreate(EstudianteBase):

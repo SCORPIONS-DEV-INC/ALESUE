@@ -13,4 +13,5 @@ class Estudiante(Base):
     seccion = Column(String, nullable=False)
     sexo = Column(String, nullable=False)
     correo = Column(String, nullable=False)
+    password = Column(String, nullable=False)
     tenant_id = Column(String, nullable=False, default="default")
