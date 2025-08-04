@@ -27,5 +27,5 @@ class Reto(Base):
     profesor_id = Column(Integer, nullable=False)  # ID del profesor que lo creó
     activo = Column(String, nullable=False, default="true")
     tenant_id = Column(String, nullable=False, default="default")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Removido temporalmente: created_at = Column(DateTime(timezone=True), server_default=func.now())
     # Removido temporalmente: updated_at = Column(DateTime(timezone=True), onupdate=func.now())
