@@ -25,6 +25,14 @@ app.add_middleware(
 # ✅ Incluir las rutas del router de estudiantes
 app.include_router(estudiantes.router)
 
+
+
+
+
+
+
+
+
 # ✅ Ruta base de prueba
 @app.get("/")
 def read_root():
