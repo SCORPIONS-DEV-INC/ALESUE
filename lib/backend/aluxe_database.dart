@@ -178,6 +178,74 @@ class AluxeDatabase {
     }
   }
 
+  // Crear reto con preguntas (solo profesores)
+  Future<Map<String, dynamic>?> createRetoConPreguntas({
+    required String token,
+    required String titulo,
+    required String descripcion,
+    required int puntos,
+    required String nivel,
+    required String materia,
+    required String tenantId,
+    required List preguntas, // Lista de preguntas con sus opciones
+  }) async {
+    try {
+      final url = Uri.parse('${baseUrl}retos/con-preguntas');
+      print('Enviando reto con preguntas a: $url');
+
+      final requestBody = {
+        'titulo': titulo,
+        'descripcion': descripcion,
+        'puntos': puntos,
+        'nivel': nivel,
+        'materia': materia,
+        'tenant_id': tenantId,
+        'preguntas': preguntas.map((p) => p.toJson()).toList(),
+      };
+
+      print('Body del request: $requestBody');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      print('Status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        // Si el endpoint no existe, usar el método tradicional
+        if (response.statusCode == 404) {
+          print('Endpoint con preguntas no existe, usando método tradicional');
+          return createReto(
+            token: token,
+            titulo: titulo,
+            descripcion: descripcion,
+            puntos: puntos,
+            nivel: nivel,
+            materia: materia,
+            tenantId: tenantId,
+          );
+        }
+
+        // Devolver el error para mostrarlo al usuario
+        final errorData = jsonDecode(response.body);
+        throw Exception(
+          errorData['detail'] ?? 'Error al crear el reto con preguntas',
+        );
+      }
+    } catch (e) {
+      print('Error en createRetoConPreguntas: $e');
+      rethrow;
+    }
+  }
+
   // Crear estudiante (solo profesores)
   Future<Map<String, dynamic>?> createEstudianteByProfesor({
     required String token,

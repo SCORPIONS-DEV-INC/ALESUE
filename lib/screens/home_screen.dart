@@ -3,6 +3,8 @@ import 'crear_estudiante_screen.dart';
 import 'crear_reto_screen.dart';
 import 'mis_retos_screen.dart';
 import 'ranking_screen.dart';
+import 'retos_materia_screen.dart';
+import 'progreso_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   // Recibe los datos del login (incluye token y user_info)
@@ -416,16 +418,30 @@ class HomeScreen extends StatelessWidget {
   }
 
   void _navigateToMateria(BuildContext context, String token, String materia) {
-    // TODO: Implementar pantalla de retos por materia
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Función: $materia - En desarrollo')),
+    final materiaNombres = {
+      'matematicas': 'Matemáticas',
+      'comunicacion': 'Comunicación',
+      'personal_social': 'Personal Social',
+      'ciencia_tecnologia': 'Ciencia y Tecnología',
+      'ingles': 'Inglés',
+    };
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RetosMateriaScreen(
+          token: token,
+          materia: materia,
+          materiaNombre: materiaNombres[materia] ?? materia,
+        ),
+      ),
     );
   }
 
   void _navigateToProgreso(BuildContext context, String token) {
-    // TODO: Implementar pantalla de progreso
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Función: Mi Progreso - En desarrollo')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ProgresoScreen(token: token)),
     );
   }
 }

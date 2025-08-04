@@ -2,6 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:aluxe/backend/aluxe_database.dart';
 
+class Pregunta {
+  String texto;
+  List<String> opciones;
+  int respuestaCorrecta; // Índice de la respuesta correcta (0-3)
+
+  Pregunta({
+    required this.texto,
+    required this.opciones,
+    required this.respuestaCorrecta,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'texto': texto,
+      'opciones': opciones,
+      'respuesta_correcta': respuestaCorrecta,
+    };
+  }
+}
+
 class CrearRetoScreen extends StatefulWidget {
   final String token;
 
@@ -22,6 +42,10 @@ class _CrearRetoScreenState extends State<CrearRetoScreen> {
   bool _isLoading = false;
   String? _error;
   final AluxeDatabase _db = AluxeDatabase.instance();
+
+  // Nuevas variables para las preguntas
+  List<Pregunta> _preguntas = [];
+  int _currentTab = 0; // 0: info básica, 1: preguntas
 
   final List<Map<String, String>> _materias = [
     {'value': 'matematicas', 'label': 'Matemáticas'},
@@ -70,13 +94,24 @@ class _CrearRetoScreenState extends State<CrearRetoScreen> {
       return;
     }
 
+    if (_preguntas.isEmpty) {
+      setState(() {
+        _error = 'Debes agregar al menos una pregunta al reto';
+      });
+      return;
+    }
+
+    if (!_validarPreguntas()) {
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final resultado = await _db.createReto(
+      final resultado = await _db.createRetoConPreguntas(
         token: widget.token,
         titulo: _tituloController.text.trim(),
         descripcion: _descripcionController.text.trim(),
@@ -84,6 +119,7 @@ class _CrearRetoScreenState extends State<CrearRetoScreen> {
         nivel: _nivelSeleccionado!,
         materia: _materiaSeleccionada!,
         tenantId: "default",
+        preguntas: _preguntas,
       );
 
       if (resultado != null) {
@@ -148,309 +184,582 @@ class _CrearRetoScreenState extends State<CrearRetoScreen> {
     }
   }
 
+  // Métodos para manejar preguntas
+  void _agregarPregunta() {
+    setState(() {
+      _preguntas.add(
+        Pregunta(texto: '', opciones: ['', '', '', ''], respuestaCorrecta: 0),
+      );
+    });
+  }
+
+  void _eliminarPregunta(int index) {
+    setState(() {
+      _preguntas.removeAt(index);
+    });
+  }
+
+  void _actualizarPregunta(int index, String campo, dynamic valor) {
+    setState(() {
+      switch (campo) {
+        case 'texto':
+          _preguntas[index].texto = valor;
+          break;
+        case 'respuesta_correcta':
+          _preguntas[index].respuestaCorrecta = valor;
+          break;
+        case 'opcion':
+          int opcionIndex = valor['index'];
+          String textoOpcion = valor['texto'];
+          _preguntas[index].opciones[opcionIndex] = textoOpcion;
+          break;
+      }
+    });
+  }
+
+  bool _validarPreguntas() {
+    for (int i = 0; i < _preguntas.length; i++) {
+      final pregunta = _preguntas[i];
+
+      if (pregunta.texto.trim().isEmpty) {
+        setState(() {
+          _error = 'La pregunta ${i + 1} no puede estar vacía';
+        });
+        return false;
+      }
+
+      if (pregunta.opciones.any((opcion) => opcion.trim().isEmpty)) {
+        setState(() {
+          _error =
+              'Todas las opciones de la pregunta ${i + 1} deben tener texto';
+        });
+        return false;
+      }
+
+      if (pregunta.opciones.toSet().length != pregunta.opciones.length) {
+        setState(() {
+          _error =
+              'Las opciones de la pregunta ${i + 1} no pueden ser duplicadas';
+        });
+        return false;
+      }
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Crear Reto'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Crear Reto'),
+          backgroundColor: Colors.indigo,
+          foregroundColor: Colors.white,
+          bottom: const TabBar(
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: [
+              Tab(icon: Icon(Icons.info), text: 'Información'),
+              Tab(icon: Icon(Icons.quiz), text: 'Preguntas'),
+            ],
+          ),
+        ),
+        body: TabBarView(children: [_buildInfoTab(), _buildPreguntasTab()]),
+        floatingActionButton: _currentTab == 1
+            ? FloatingActionButton(
+                onPressed: _agregarPregunta,
+                backgroundColor: Colors.indigo,
+                child: const Icon(Icons.add, color: Colors.white),
+              )
+            : null,
+        bottomNavigationBar: Container(
+          padding: const EdgeInsets.all(16),
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _crearReto,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text(
+                    'Crear Reto',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+          ),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_error != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade100,
-                    border: Border.all(color: Colors.red),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
+    );
+  }
 
-              // Título del reto
-              TextFormField(
-                controller: _tituloController,
-                decoration: const InputDecoration(
-                  labelText: 'Título del Reto',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.title),
-                  hintText: 'Ej: Multiplicación de fracciones',
+  Widget _buildInfoTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_error != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  border: Border.all(color: Colors.red),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'El título es obligatorio';
-                  }
-                  if (value.length < 5) {
-                    return 'El título debe tener al menos 5 caracteres';
-                  }
-                  return null;
-                },
+                child: Text(_error!, style: const TextStyle(color: Colors.red)),
               ),
-              const SizedBox(height: 16),
 
-              // Descripción
-              TextFormField(
-                controller: _descripcionController,
-                decoration: const InputDecoration(
-                  labelText: 'Descripción del Reto',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
-                  hintText: 'Describe qué debe hacer el estudiante...',
-                ),
-                maxLines: 4,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'La descripción es obligatoria';
-                  }
-                  if (value.length < 20) {
-                    return 'La descripción debe tener al menos 20 caracteres';
-                  }
-                  return null;
-                },
+            // Título del reto
+            TextFormField(
+              controller: _tituloController,
+              decoration: const InputDecoration(
+                labelText: 'Título del Reto',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.title),
+                hintText: 'Ej: Multiplicación de fracciones',
               ),
-              const SizedBox(height: 16),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'El título es obligatorio';
+                }
+                if (value.length < 5) {
+                  return 'El título debe tener al menos 5 caracteres';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
 
-              // Materia
-              DropdownButtonFormField<String>(
-                value: _materiaSeleccionada,
-                decoration: const InputDecoration(
-                  labelText: 'Materia',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.subject),
-                ),
-                items: _materias.map((materia) {
-                  return DropdownMenuItem<String>(
-                    value: materia['value'],
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: _getMateriaColor(materia['value']!),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Icon(
-                            _getMateriaIcon(materia['value']!),
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(materia['label']!),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _materiaSeleccionada = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null) {
-                    return 'La materia es obligatoria';
-                  }
-                  return null;
-                },
+            // Descripción
+            TextFormField(
+              controller: _descripcionController,
+              decoration: const InputDecoration(
+                labelText: 'Descripción del Reto',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.description),
+                hintText: 'Describe qué debe hacer el estudiante...',
               ),
-              const SizedBox(height: 16),
+              maxLines: 4,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'La descripción es obligatoria';
+                }
+                if (value.length < 20) {
+                  return 'La descripción debe tener al menos 20 caracteres';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
 
-              // Nivel
-              DropdownButtonFormField<String>(
-                value: _nivelSeleccionado,
-                decoration: const InputDecoration(
-                  labelText: 'Nivel de Dificultad',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.trending_up),
-                ),
-                items: _niveles.map((nivel) {
-                  Color color = Colors.grey;
-                  IconData icon = Icons.help;
-
-                  switch (nivel['value']) {
-                    case 'facil':
-                      color = Colors.green;
-                      icon = Icons.sentiment_satisfied;
-                      break;
-                    case 'medio':
-                      color = Colors.orange;
-                      icon = Icons.sentiment_neutral;
-                      break;
-                    case 'dificil':
-                      color = Colors.red;
-                      icon = Icons.sentiment_very_dissatisfied;
-                      break;
-                  }
-
-                  return DropdownMenuItem<String>(
-                    value: nivel['value'],
-                    child: Row(
-                      children: [
-                        Icon(icon, color: color, size: 20),
-                        const SizedBox(width: 8),
-                        Text(nivel['label']!),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _nivelSeleccionado = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null) {
-                    return 'El nivel es obligatorio';
-                  }
-                  return null;
-                },
+            // Materia
+            DropdownButtonFormField<String>(
+              value: _materiaSeleccionada,
+              decoration: const InputDecoration(
+                labelText: 'Materia',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.subject),
               ),
-              const SizedBox(height: 16),
-
-              // Puntos
-              TextFormField(
-                controller: _puntosController,
-                decoration: const InputDecoration(
-                  labelText: 'Puntos por Completar',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.star),
-                  suffixText: 'pts',
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(3),
-                ],
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Los puntos son obligatorios';
-                  }
-                  final puntos = int.tryParse(value);
-                  if (puntos == null || puntos < 1 || puntos > 100) {
-                    return 'Los puntos deben estar entre 1 y 100';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 32),
-
-              // Vista previa del reto
-              if (_materiaSeleccionada != null || _nivelSeleccionado != null)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              items: _materias.map((materia) {
+                return DropdownMenuItem<String>(
+                  value: materia['value'],
+                  child: Row(
                     children: [
-                      const Text(
-                        'Vista Previa:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: _getMateriaColor(materia['value']!),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Icon(
+                          _getMateriaIcon(materia['value']!),
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      if (_materiaSeleccionada != null)
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _getMateriaColor(_materiaSeleccionada!),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    _getMateriaIcon(_materiaSeleccionada!),
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _materias.firstWhere(
-                                      (m) => m['value'] == _materiaSeleccionada,
-                                    )['label']!,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                      const SizedBox(width: 8),
+                      Text(materia['label']!),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _materiaSeleccionada = value;
+                });
+              },
+              validator: (value) {
+                if (value == null) {
+                  return 'La materia es obligatoria';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Nivel
+            DropdownButtonFormField<String>(
+              value: _nivelSeleccionado,
+              decoration: const InputDecoration(
+                labelText: 'Nivel de Dificultad',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.trending_up),
+              ),
+              items: _niveles.map((nivel) {
+                Color color = Colors.grey;
+                IconData icon = Icons.help;
+
+                switch (nivel['value']) {
+                  case 'facil':
+                    color = Colors.green;
+                    icon = Icons.sentiment_satisfied;
+                    break;
+                  case 'medio':
+                    color = Colors.orange;
+                    icon = Icons.sentiment_neutral;
+                    break;
+                  case 'dificil':
+                    color = Colors.red;
+                    icon = Icons.sentiment_very_dissatisfied;
+                    break;
+                }
+
+                return DropdownMenuItem<String>(
+                  value: nivel['value'],
+                  child: Row(
+                    children: [
+                      Icon(icon, color: color, size: 20),
+                      const SizedBox(width: 8),
+                      Text(nivel['label']!),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _nivelSeleccionado = value;
+                });
+              },
+              validator: (value) {
+                if (value == null) {
+                  return 'El nivel es obligatorio';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Puntos
+            TextFormField(
+              controller: _puntosController,
+              decoration: const InputDecoration(
+                labelText: 'Puntos por Completar',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.star),
+                suffixText: 'pts',
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(3),
+              ],
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Los puntos son obligatorios';
+                }
+                final puntos = int.tryParse(value);
+                if (puntos == null || puntos < 1 || puntos > 100) {
+                  return 'Los puntos deben estar entre 1 y 100';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 32),
+
+            // Vista previa del reto
+            if (_materiaSeleccionada != null || _nivelSeleccionado != null)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Vista Previa:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_materiaSeleccionada != null)
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
                             ),
-                            if (_nivelSeleccionado != null) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
+                            decoration: BoxDecoration(
+                              color: _getMateriaColor(_materiaSeleccionada!),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _getMateriaIcon(_materiaSeleccionada!),
+                                  color: Colors.white,
+                                  size: 16,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: _nivelSeleccionado == 'facil'
-                                      ? Colors.green
-                                      : _nivelSeleccionado == 'medio'
-                                      ? Colors.orange
-                                      : Colors.red,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  _niveles.firstWhere(
-                                    (n) => n['value'] == _nivelSeleccionado,
+                                const SizedBox(width: 4),
+                                Text(
+                                  _materias.firstWhere(
+                                    (m) => m['value'] == _materiaSeleccionada,
                                   )['label']!,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,
                                   ),
                                 ),
+                              ],
+                            ),
+                          ),
+                          if (_nivelSeleccionado != null) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
                               ),
-                            ],
+                              decoration: BoxDecoration(
+                                color: _nivelSeleccionado == 'facil'
+                                    ? Colors.green
+                                    : _nivelSeleccionado == 'medio'
+                                    ? Colors.orange
+                                    : Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                _niveles.firstWhere(
+                                  (n) => n['value'] == _nivelSeleccionado,
+                                )['label']!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                           ],
-                        ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 24),
-
-              // Botón crear
-              ElevatedButton(
-                onPressed: _isLoading ? null : _crearReto,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Crear Reto',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        ],
                       ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 80), // Espacio para el botón
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreguntasTab() {
+    return Column(
+      children: [
+        if (_preguntas.isEmpty)
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.quiz, size: 64, color: Colors.grey.shade400),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No hay preguntas agregadas',
+                    style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Toca el botón + para agregar una pregunta',
+                    style: TextStyle(color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _preguntas.length,
+              itemBuilder: (context, index) {
+                return _buildPreguntaCard(index);
+              },
+            ),
+          ),
+
+        // Información sobre preguntas
+        Container(
+          padding: const EdgeInsets.all(16),
+          color: Colors.blue.shade50,
+          child: Row(
+            children: [
+              Icon(Icons.info, color: Colors.blue.shade600),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Preguntas: ${_preguntas.length}/10',
+                  style: TextStyle(
+                    color: Colors.blue.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 80), // Espacio para el botón
+      ],
+    );
+  }
+
+  Widget _buildPreguntaCard(int index) {
+    final pregunta = _preguntas[index];
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header de la pregunta
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Colors.indigo,
+                  radius: 12,
+                  child: Text(
+                    '${index + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Pregunta',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => _eliminarPregunta(index),
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  tooltip: 'Eliminar pregunta',
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Texto de la pregunta
+            TextFormField(
+              initialValue: pregunta.texto,
+              decoration: const InputDecoration(
+                labelText: 'Enunciado de la pregunta',
+                border: OutlineInputBorder(),
+                hintText: 'Escribe la pregunta aquí...',
+              ),
+              maxLines: 2,
+              onChanged: (value) {
+                _actualizarPregunta(index, 'texto', value);
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Opciones
+            const Text(
+              'Opciones de respuesta:',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+
+            ...List.generate(4, (opcionIndex) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Radio<int>(
+                      value: opcionIndex,
+                      groupValue: pregunta.respuestaCorrecta,
+                      onChanged: (value) {
+                        _actualizarPregunta(index, 'respuesta_correcta', value);
+                      },
+                      activeColor: Colors.green,
+                    ),
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: pregunta.opciones[opcionIndex],
+                        decoration: InputDecoration(
+                          labelText:
+                              'Opción ${String.fromCharCode(65 + opcionIndex)}',
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          _actualizarPregunta(index, 'opcion', {
+                            'index': opcionIndex,
+                            'texto': value,
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+            // Indicador de respuesta correcta
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.green.shade600,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Respuesta correcta: Opción ${String.fromCharCode(65 + pregunta.respuestaCorrecta)}',
+                    style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
