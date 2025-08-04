@@ -31,7 +31,8 @@ class CrearRetoScreen extends StatefulWidget {
   State<CrearRetoScreen> createState() => _CrearRetoScreenState();
 }
 
-class _CrearRetoScreenState extends State<CrearRetoScreen> {
+class _CrearRetoScreenState extends State<CrearRetoScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _tituloController = TextEditingController();
   final _descripcionController = TextEditingController();
@@ -46,6 +47,7 @@ class _CrearRetoScreenState extends State<CrearRetoScreen> {
   // Nuevas variables para las preguntas
   List<Pregunta> _preguntas = [];
   int _currentTab = 0; // 0: info básica, 1: preguntas
+  late TabController _tabController;
 
   final List<Map<String, String>> _materias = [
     {'value': 'matematicas', 'label': 'Matemáticas'},
@@ -65,6 +67,12 @@ class _CrearRetoScreenState extends State<CrearRetoScreen> {
   void initState() {
     super.initState();
     _puntosController.text = '10'; // Valor por defecto
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        _currentTab = _tabController.index;
+      });
+    });
   }
 
   @override
@@ -72,6 +80,7 @@ class _CrearRetoScreenState extends State<CrearRetoScreen> {
     _tituloController.dispose();
     _descripcionController.dispose();
     _puntosController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -249,49 +258,51 @@ class _CrearRetoScreenState extends State<CrearRetoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Crear Reto'),
-          backgroundColor: Colors.indigo,
-          foregroundColor: Colors.white,
-          bottom: const TabBar(
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            tabs: [
-              Tab(icon: Icon(Icons.info), text: 'Información'),
-              Tab(icon: Icon(Icons.quiz), text: 'Preguntas'),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Crear Reto'),
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(icon: Icon(Icons.info), text: 'Información'),
+            Tab(icon: Icon(Icons.quiz), text: 'Preguntas'),
+          ],
         ),
-        body: TabBarView(children: [_buildInfoTab(), _buildPreguntasTab()]),
-        floatingActionButton: _currentTab == 1
-            ? FloatingActionButton(
-                onPressed: _agregarPregunta,
-                backgroundColor: Colors.indigo,
-                child: const Icon(Icons.add, color: Colors.white),
-              )
-            : null,
-        bottomNavigationBar: Container(
-          padding: const EdgeInsets.all(16),
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _crearReto,
-            style: ElevatedButton.styleFrom(
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [_buildInfoTab(), _buildPreguntasTab()],
+      ),
+      floatingActionButton: _currentTab == 1
+          ? FloatingActionButton(
+              onPressed: _agregarPregunta,
               backgroundColor: Colors.indigo,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              child: const Icon(Icons.add, color: Colors.white),
+              tooltip: 'Agregar pregunta',
+            )
+          : null,
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        child: ElevatedButton(
+          onPressed: _isLoading ? null : _crearReto,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.indigo,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: _isLoading
-                ? const CircularProgressIndicator(color: Colors.white)
-                : const Text(
-                    'Crear Reto',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
           ),
+          child: _isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text(
+                  'Crear Reto',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
         ),
       ),
     );
