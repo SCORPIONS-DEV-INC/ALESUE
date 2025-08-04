@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'crear_estudiante_screen.dart';
+import 'crear_reto_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   // Recibe los datos del login (incluye token y user_info)
@@ -360,21 +362,41 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Métodos de navegación (se implementarán las pantallas más adelante)
+  // Métodos de navegación
   void _navigateToCreateStudent(BuildContext context, String token) {
-    // TODO: Implementar pantalla de crear estudiante
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Función: Crear Estudiante - En desarrollo'),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CrearEstudianteScreen(token: token),
       ),
-    );
+    ).then((result) {
+      if (result == true) {
+        // Estudiante creado exitosamente
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Estudiante creado exitosamente!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    });
   }
 
   void _navigateToCreateReto(BuildContext context, String token) {
-    // TODO: Implementar pantalla de crear reto
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Función: Crear Reto - En desarrollo')),
-    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => CrearRetoScreen(token: token)),
+    ).then((result) {
+      if (result == true) {
+        // Reto creado exitosamente
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Reto creado exitosamente!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    });
   }
 
   void _navigateToRanking(BuildContext context, String token) {

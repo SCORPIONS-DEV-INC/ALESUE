@@ -104,12 +104,21 @@ def crear_estudiante_por_profesor(
             detail="El DNI ya está registrado"
         )
     
-    # Verificar si el email ya existe
-    if db.query(Usuario).filter(Usuario.email == estudiante.email).first():
+    # Verificar si el email ya existe (solo si se proporciona)
+    if estudiante.email and db.query(Usuario).filter(Usuario.email == estudiante.email).first():
         raise HTTPException(
             status_code=400,
             detail="El email ya está registrado"
         )
+    
+    # Generar email automático si no se proporciona
+    email_final = estudiante.email
+    if not email_final:
+        email_final = f"{estudiante.dni}@estudiante.colegio.edu"
+        # Verificar que el email generado no existe
+        while db.query(Usuario).filter(Usuario.email == email_final).first():
+            import random
+            email_final = f"{estudiante.dni}_{random.randint(1000, 9999)}@estudiante.colegio.edu"
     
     # Hashear la contraseña
     password_hash = hash_password(estudiante.password)
@@ -117,7 +126,7 @@ def crear_estudiante_por_profesor(
     # Crear el estudiante
     nuevo_estudiante = Usuario(
         username=estudiante.dni,  # DNI como username
-        email=estudiante.email,
+        email=email_final,
         password_hash=password_hash,
         rol="estudiante",
         nombre=estudiante.nombre,

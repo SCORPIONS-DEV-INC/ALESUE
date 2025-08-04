@@ -49,7 +49,7 @@ class EstudianteCreateByProfesor(BaseModel):
     grado: str
     seccion: str
     sexo: str
-    email: str
+    email: Optional[str] = None  # Email opcional
     password: str
     tenant_id: str = "default"
 

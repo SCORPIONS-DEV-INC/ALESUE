@@ -171,29 +171,37 @@ class AluxeDatabase {
     required String grado,
     required String seccion,
     required String sexo,
-    required String email,
+    String? email, // Hacer email opcional
     required String password,
     required String tenantId,
   }) async {
     final url = Uri.parse('${baseUrl}auth/crear-estudiante');
+
+    // Construir el body dinámicamente, excluyendo email si es null
+    final Map<String, dynamic> requestBody = {
+      'dni': dni,
+      'nombre': nombre,
+      'apellido': apellido,
+      'edad': edad,
+      'grado': grado,
+      'seccion': seccion,
+      'sexo': sexo,
+      'password': password,
+      'tenant_id': tenantId,
+    };
+
+    // Solo agregar email si no es null
+    if (email != null && email.isNotEmpty) {
+      requestBody['email'] = email;
+    }
+
     final response = await http.post(
       url,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode({
-        'dni': dni,
-        'nombre': nombre,
-        'apellido': apellido,
-        'edad': edad,
-        'grado': grado,
-        'seccion': seccion,
-        'sexo': sexo,
-        'email': email,
-        'password': password,
-        'tenant_id': tenantId,
-      }),
+      body: jsonEncode(requestBody),
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {

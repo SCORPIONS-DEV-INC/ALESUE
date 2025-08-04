@@ -2,7 +2,6 @@ import 'package:flutter/services.dart';
 import 'package:aluxe/backend/aluxe_database.dart';
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
-import 'tipo_usuario_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -341,7 +340,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 32),
 
-                // Enlace a registro
+                // Enlace a registro (oculto)
+                /*
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -370,8 +370,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
-                const Spacer(),
+                */
 
                 // Términos y condiciones
                 Padding(
