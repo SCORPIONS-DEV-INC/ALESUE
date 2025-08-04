@@ -2,22 +2,24 @@ import 'package:flutter/services.dart';
 import 'package:aluxe/backend/aluxe_database.dart';
 import 'package:flutter/material.dart';
 
-class RegistroScreen extends StatefulWidget {
-  const RegistroScreen({super.key});
+class RegistroEstudianteScreen extends StatefulWidget {
+  const RegistroEstudianteScreen({super.key});
 
   @override
-  State<RegistroScreen> createState() => _RegistroScreenState();
+  State<RegistroEstudianteScreen> createState() =>
+      _RegistroEstudianteScreenState();
 }
 
-class _RegistroScreenState extends State<RegistroScreen> {
+class _RegistroEstudianteScreenState extends State<RegistroEstudianteScreen> {
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _nombreController = TextEditingController();
   final _apellidoController = TextEditingController();
   final _dniController = TextEditingController();
-  final _correoController = TextEditingController();
   final _edadController = TextEditingController();
   final _gradoController = TextEditingController();
   final _seccionController = TextEditingController();
-  final _passwordController = TextEditingController();
   String? _sexoSeleccionado;
   bool _mostrarPassword = false;
   final AluxeDatabase _db = AluxeDatabase.instance();
@@ -26,36 +28,41 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
   @override
   void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     _nombreController.dispose();
     _apellidoController.dispose();
     _dniController.dispose();
-    _correoController.dispose();
     _edadController.dispose();
     _gradoController.dispose();
     _seccionController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _registrar() async {
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
     final nombre = _nombreController.text.trim();
     final apellido = _apellidoController.text.trim();
     final dni = _dniController.text.trim();
-    final correo = _correoController.text.trim();
     final edadStr = _edadController.text.trim();
     final grado = _gradoController.text.trim();
     final seccion = _seccionController.text.trim();
-    final password = _passwordController.text.trim();
     final sexo = _sexoSeleccionado ?? '';
+
     // Validaciones
-    if (nombre.isEmpty ||
+    if (username.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        nombre.isEmpty ||
         apellido.isEmpty ||
         dni.isEmpty ||
         edadStr.isEmpty ||
         grado.isEmpty ||
         seccion.isEmpty ||
-        sexo.isEmpty ||
-        password.isEmpty) {
+        sexo.isEmpty) {
       setState(() {
         _error = 'Todos los campos son obligatorios';
       });
@@ -69,9 +76,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
       return;
     }
 
-    if (correo.isNotEmpty && !correo.contains('@')) {
+    if (!email.contains('@')) {
       setState(() {
-        _error = 'Correo inválido';
+        _error = 'Email inválido';
       });
       return;
     }
@@ -96,38 +103,32 @@ class _RegistroScreenState extends State<RegistroScreen> {
       _isLoading = true;
       _error = null;
     });
-    // ID del colegio o tenant (puedes cambiarlo)
-    const String tenantId = 'colegio_san_martin';
 
     try {
-      // Llama a la API del backend para registrar estudiante
-      final exito = await _db.registerEstudiante(
-        dni: dni,
+      // Llamar a la nueva API de registro
+      await _db.registerUsuario(
+        username: username,
+        email: email,
+        password: password,
         nombre: nombre,
         apellido: apellido,
-        edad: int.tryParse(edadStr) ?? 0,
+        rol: "estudiante",
+        dni: dni,
+        edad: edad,
         grado: grado,
         seccion: seccion,
         sexo: sexo,
-        correo: correo,
-        tenantId: tenantId,
+        tenantId: "colegio_san_martin",
       );
 
-      if (exito) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('✅ Registro exitoso')));
-        _limpiarCampos();
-        Navigator.pop(context);
-      } else {
-        setState(() {
-          _error =
-              'Error al registrar. Intenta con otro usuario o revisa los datos.';
-        });
-      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('✅ Registro exitoso')));
+      _limpiarCampos();
+      Navigator.pop(context);
     } catch (e) {
       setState(() {
-        _error = 'Error al registrar: $e';
+        _error = e.toString().replaceAll('Exception: ', '');
       });
     } finally {
       if (mounted) {
@@ -139,14 +140,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
   }
 
   void _limpiarCampos() {
+    _usernameController.clear();
+    _emailController.clear();
+    _passwordController.clear();
     _nombreController.clear();
     _apellidoController.clear();
     _dniController.clear();
-    _correoController.clear();
     _edadController.clear();
     _gradoController.clear();
     _seccionController.clear();
-    _passwordController.clear();
     _sexoSeleccionado = null;
   }
 
@@ -170,86 +172,38 @@ class _RegistroScreenState extends State<RegistroScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 20),
-                const SizedBox(height: 40),
                 const Text(
-                  'Alusue App',
+                  'Registro de Estudiante',
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Registro de Estudiante',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
                 const SizedBox(height: 30),
 
-                // Nombre
+                // Username
                 _buildTextField(
-                  _nombreController,
-                  'Nombre',
-                  icon: Icons.person,
+                  _usernameController,
+                  'Nombre de usuario',
+                  icon: Icons.account_circle,
                 ),
                 const SizedBox(height: 16),
+
+                // Email
                 _buildTextField(
-                  _apellidoController,
-                  'Apellido',
-                  icon: Icons.person_outline,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  _dniController,
-                  'DNI (8 dígitos)',
-                  keyboardType: TextInputType.number,
-                  icon: Icons.badge,
-                  maxLength: 8,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(8),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  _correoController,
-                  'Correo electrónico (opcional)',
+                  _emailController,
+                  'Email',
                   keyboardType: TextInputType.emailAddress,
                   icon: Icons.email,
                 ),
                 const SizedBox(height: 16),
-                _buildTextField(
-                  _edadController,
-                  'Edad',
-                  keyboardType: TextInputType.number,
-                  icon: Icons.cake,
-                ),
-                const SizedBox(height: 16),
-                // Campo grado oculto, valor fijo
-                Builder(
-                  builder: (context) {
-                    _gradoController.text = '6° de primaria';
-                    return const SizedBox.shrink();
-                  },
-                ),
-                // ...existing code...
-                _buildTextField(
-                  _seccionController,
-                  'Sección (ej: A)',
-                  icon: Icons.class_,
-                ),
-                const SizedBox(height: 16),
-                // Campo contraseña con mostrar/ocultar
+
+                // Password
                 TextField(
                   controller: _passwordController,
                   obscureText: !_mostrarPassword,
-                  keyboardType: TextInputType.visiblePassword,
                   decoration: InputDecoration(
                     hintText: 'Contraseña',
                     prefixIcon: const Icon(
@@ -282,7 +236,63 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Campo sexo como dropdown mejorado
+
+                // Nombre
+                _buildTextField(
+                  _nombreController,
+                  'Nombre',
+                  icon: Icons.person,
+                ),
+                const SizedBox(height: 16),
+
+                // Apellido
+                _buildTextField(
+                  _apellidoController,
+                  'Apellido',
+                  icon: Icons.person_outline,
+                ),
+                const SizedBox(height: 16),
+
+                // DNI
+                _buildTextField(
+                  _dniController,
+                  'DNI (8 dígitos)',
+                  keyboardType: TextInputType.number,
+                  icon: Icons.badge,
+                  maxLength: 8,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(8),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Edad
+                _buildTextField(
+                  _edadController,
+                  'Edad',
+                  keyboardType: TextInputType.number,
+                  icon: Icons.cake,
+                ),
+                const SizedBox(height: 16),
+
+                // Grado
+                _buildTextField(
+                  _gradoController,
+                  'Grado (ej: 6° de primaria)',
+                  icon: Icons.school,
+                ),
+                const SizedBox(height: 16),
+
+                // Sección
+                _buildTextField(
+                  _seccionController,
+                  'Sección (ej: A)',
+                  icon: Icons.class_,
+                ),
+                const SizedBox(height: 16),
+
+                // Sexo
                 DropdownButtonFormField<String>(
                   value: _sexoSeleccionado,
                   items: const [
@@ -331,10 +341,12 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // Botón registrar
                 ElevatedButton(
                   onPressed: _isLoading ? null : _registrar,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
+                    backgroundColor: Colors.blue,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -352,10 +364,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
                           ),
                         )
                       : const Text(
-                          'Registrarse',
+                          'Registrarse como Estudiante',
                           style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
                 ),
+
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   Text(
@@ -364,12 +377,12 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ],
+
                 const SizedBox(height: 16),
-                const SizedBox(height: 24),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text(
-                    '¿Ya tienes una cuenta? Inicia sesión',
+                    'Volver',
                     style: TextStyle(color: Colors.black87),
                   ),
                 ),
@@ -411,27 +424,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
       ),
     );
   }
-}
-
-Widget _buildTextField(
-  TextEditingController controller,
-  String hintText, {
-  TextInputType? keyboardType,
-}) {
-  return TextField(
-    controller: controller,
-    keyboardType: keyboardType,
-    decoration: InputDecoration(
-      hintText: hintText,
-      filled: true,
-      fillColor: Colors.grey[100],
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    ),
-  );
 }
 
 extension on String {

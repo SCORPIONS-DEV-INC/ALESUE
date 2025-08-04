@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:aluxe/backend/aluxe_database.dart';
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
-import 'registro_screen.dart';
+import 'tipo_usuario_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -47,17 +47,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       // Llama a la API del backend para login
-      final token = await AluxeDatabase.instance().login(
+      final loginResult = await AluxeDatabase.instance().login(
         username: usuario,
         password: password,
       );
 
-      if (token != null) {
+      if (loginResult != null) {
         // ✅ Login exitoso
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HomeScreen(userData: {'token': token}),
+            builder: (context) => HomeScreen(userData: loginResult),
           ),
         );
       } else {
@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 40),
                 const Text(
-                  'Aluxe App',
+                  'Alusue App',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -246,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const RegistroScreen(),
+                        builder: (context) => const TipoUsuarioScreen(),
                       ),
                     );
                   },

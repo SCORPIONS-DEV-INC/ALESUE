@@ -12,7 +12,7 @@ class EstudianteBase(BaseModel):
     sexo: str
     correo: str
     password: str
-    tenant_id: str  # Ahora es obligatorio
+    tenant_id: str 
 
 class EstudianteCreate(EstudianteBase):
     pass

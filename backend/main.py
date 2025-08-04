@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import estudiantes
+from app.routers import estudiantes, auth, retos
 from app.database import Base, engine
-from app.models import estudiante  
+from app.models import estudiante, usuario, reto  
 
 print("Creando tablas en la base de datos...")
 Base.metadata.create_all(bind=engine)
@@ -30,6 +30,8 @@ app.add_middleware(
 
 # ✅ Incluir las rutas del router de estudiantes
 app.include_router(estudiantes.router)
+app.include_router(auth.router)
+app.include_router(retos.router)
 
 # ✅ Ruta base de prueba
 @app.get("/")
