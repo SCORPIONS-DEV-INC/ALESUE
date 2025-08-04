@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 class AluxeDatabase {
   static final AluxeDatabase _instance = AluxeDatabase._init();
   // Cambia esta URL por la de tu backend en Render para producción
-  static const String baseUrl = 'https://TU-URL-RENDER.onrender.com';
+  static const String baseUrl = 'https://alesue.onrender.com/';
 
   AluxeDatabase._init();
   factory AluxeDatabase.instance() => _instance;
