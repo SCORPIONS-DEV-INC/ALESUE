@@ -53,29 +53,86 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
+            print("[DEBUG] Token sin username válido")
             raise credentials_exception
-    except JWTError:
+            
+        print(f"[DEBUG] Buscando usuario: {username}")
+        
+    except JWTError as e:
+        print(f"[ERROR] Error al decodificar JWT: {e}")
         raise credentials_exception
+    except Exception as e:
+        print(f"[ERROR] Error inesperado en auth: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error interno de autenticación: {str(e)}"
+        )
     
-    user = db.query(Usuario).filter(Usuario.username == username).first()
-    if user is None:
-        raise credentials_exception
-    return user
+    try:
+        user = db.query(Usuario).filter(Usuario.username == username).first()
+        if user is None:
+            print(f"[DEBUG] Usuario no encontrado: {username}")
+            raise credentials_exception
+            
+        print(f"[DEBUG] Usuario encontrado: {user.id} - {user.username}")
+        return user
+        
+    except Exception as e:
+        print(f"[ERROR] Error al buscar usuario en BD: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al consultar base de datos: {str(e)}"
+        )
 
 async def get_current_active_user(current_user: Usuario = Depends(get_current_user)):
     """Obtiene el usuario actual activo"""
-    if current_user.activo != "true":
-        raise HTTPException(status_code=400, detail="Usuario inactivo")
-    return current_user
+    try:
+        print(f"[DEBUG] Verificando usuario activo: {current_user.username}")
+        
+        # Verificar si el usuario tiene el campo activo
+        if not hasattr(current_user, 'activo'):
+            print("[DEBUG] Usuario sin campo 'activo', asumiendo activo")
+            return current_user
+            
+        if current_user.activo != "true":
+            print(f"[DEBUG] Usuario inactivo: {current_user.activo}")
+            raise HTTPException(status_code=400, detail="Usuario inactivo")
+            
+        print(f"[DEBUG] Usuario activo confirmado")
+        return current_user
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Error verificando usuario activo: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al verificar estado del usuario: {str(e)}"
+        )
 
 async def get_current_profesor(current_user: Usuario = Depends(get_current_active_user)):
     """Verifica que el usuario actual sea profesor o admin"""
-    if current_user.rol not in [RolEnum.PROFESOR, RolEnum.ADMIN]:
+    try:
+        print(f"[DEBUG] Verificando permisos de profesor para: {current_user.username} (rol: {current_user.rol})")
+        
+        if current_user.rol not in [RolEnum.PROFESOR, RolEnum.ADMIN]:
+            print(f"[DEBUG] Usuario sin permisos de profesor: {current_user.rol}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos de profesor"
+            )
+            
+        print(f"[DEBUG] Permisos de profesor confirmados")
+        return current_user
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Error verificando permisos de profesor: {e}")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permisos de profesor"
+            status_code=500,
+            detail=f"Error al verificar permisos: {str(e)}"
         )
-    return current_user
 
 async def get_current_estudiante(current_user: Usuario = Depends(get_current_active_user)):
     """Verifica que el usuario actual sea estudiante"""

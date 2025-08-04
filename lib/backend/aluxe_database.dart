@@ -139,6 +139,11 @@ class AluxeDatabase {
     required String tenantId,
   }) async {
     try {
+      // Verificar que el token no esté vacío
+      if (token.trim().isEmpty) {
+        throw Exception('Token de autenticación requerido');
+      }
+
       final url = Uri.parse('${baseUrl}retos/');
       print('Enviando reto a: $url');
 
@@ -152,6 +157,7 @@ class AluxeDatabase {
       };
 
       print('Body del request: $requestBody');
+      print('Token usado: ${token.substring(0, 20)}...');
 
       final response = await http.post(
         url,
@@ -168,17 +174,37 @@ class AluxeDatabase {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body);
       } else {
-        // Devolver el error para mostrarlo al usuario
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['detail'] ?? 'Error al crear el reto');
+        // Manejar diferentes tipos de errores
+        String errorMessage;
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage = errorData['detail'] ?? 'Error al crear el reto';
+        } catch (e) {
+          // Si no es JSON válido, usar el texto directo
+          errorMessage = response.body.isNotEmpty
+              ? response.body
+              : 'Error ${response.statusCode}';
+        }
+
+        // Proporcionar mensajes más específicos
+        if (response.statusCode == 401) {
+          errorMessage =
+              'Token de autenticación inválido o expirado. Por favor, inicia sesión nuevamente.';
+        } else if (response.statusCode == 403) {
+          errorMessage = 'No tienes permisos para crear retos';
+        } else if (response.statusCode == 500) {
+          errorMessage =
+              'Error interno del servidor. Intenta de nuevo en unos momentos.';
+        }
+
+        throw Exception(errorMessage);
       }
     } catch (e) {
       print('Error en createReto: $e');
       rethrow;
     }
-  }
+  } // Crear reto con preguntas (solo profesores)
 
-  // Crear reto con preguntas (solo profesores)
   Future<Map<String, dynamic>?> createRetoConPreguntas({
     required String token,
     required String titulo,

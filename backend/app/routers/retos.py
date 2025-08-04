@@ -19,21 +19,38 @@ def crear_reto(
 ):
     """Crea un nuevo reto (solo profesores)"""
     
-    nuevo_reto = Reto(
-        titulo=reto.titulo,
-        descripcion=reto.descripcion,
-        puntos=reto.puntos,
-        nivel=reto.nivel,
-        materia=reto.materia,
-        profesor_id=current_user.id,
-        tenant_id=reto.tenant_id
-    )
-    
-    db.add(nuevo_reto)
-    db.commit()
-    db.refresh(nuevo_reto)
-    
-    return nuevo_reto
+    try:
+        print(f"[DEBUG] Creando reto para profesor {current_user.id}")
+        print(f"[DEBUG] Datos del reto: {reto.dict()}")
+        
+        nuevo_reto = Reto(
+            titulo=reto.titulo,
+            descripcion=reto.descripcion,
+            puntos=reto.puntos,
+            nivel=reto.nivel,
+            materia=reto.materia,
+            profesor_id=current_user.id,
+            tenant_id=reto.tenant_id
+        )
+        
+        print(f"[DEBUG] Reto creado en memoria: {nuevo_reto}")
+        
+        db.add(nuevo_reto)
+        db.commit()
+        db.refresh(nuevo_reto)
+        
+        print(f"[DEBUG] Reto guardado en BD con ID: {nuevo_reto.id}")
+        
+        return nuevo_reto
+        
+    except Exception as e:
+        print(f"[ERROR] Error al crear reto: {e}")
+        print(f"[ERROR] Tipo de error: {type(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error interno al crear el reto: {str(e)}"
+        )
 
 @router.get("/", response_model=List[RetoOut])
 def listar_retos(
