@@ -138,27 +138,44 @@ class AluxeDatabase {
     required String materia,
     required String tenantId,
   }) async {
-    final url = Uri.parse('${baseUrl}retos/');
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
+    try {
+      final url = Uri.parse('${baseUrl}retos/');
+      print('Enviando reto a: $url');
+
+      final requestBody = {
         'titulo': titulo,
         'descripcion': descripcion,
         'puntos': puntos,
         'nivel': nivel,
         'materia': materia,
         'tenant_id': tenantId,
-      }),
-    );
+      };
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
+      print('Body del request: $requestBody');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      print('Status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        // Devolver el error para mostrarlo al usuario
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['detail'] ?? 'Error al crear el reto');
+      }
+    } catch (e) {
+      print('Error en createReto: $e');
+      rethrow;
     }
-    return null;
   }
 
   // Crear estudiante (solo profesores)
@@ -302,5 +319,35 @@ class AluxeDatabase {
       return data.cast<Map<String, dynamic>>();
     }
     return [];
+  }
+
+  // Obtener mis retos creados (profesores)
+  Future<List<Map<String, dynamic>>> getMisRetos(String token) async {
+    try {
+      final url = Uri.parse('${baseUrl}retos/mis-retos');
+      print('Obteniendo mis retos de: $url');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('Mis retos status code: ${response.statusCode}');
+      print('Mis retos response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.cast<Map<String, dynamic>>();
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['detail'] ?? 'Error al obtener mis retos');
+      }
+    } catch (e) {
+      print('Error en getMisRetos: $e');
+      rethrow;
+    }
   }
 }

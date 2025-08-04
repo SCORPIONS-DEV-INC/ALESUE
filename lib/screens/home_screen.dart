@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'crear_estudiante_screen.dart';
 import 'crear_reto_screen.dart';
+import 'mis_retos_screen.dart';
+import 'ranking_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   // Recibe los datos del login (incluye token y user_info)
@@ -400,16 +402,16 @@ class HomeScreen extends StatelessWidget {
   }
 
   void _navigateToRanking(BuildContext context, String token) {
-    // TODO: Implementar pantalla de ranking
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Función: Ver Ranking - En desarrollo')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => RankingScreen(token: token)),
     );
   }
 
   void _navigateToMisRetos(BuildContext context, String token) {
-    // TODO: Implementar pantalla de mis retos
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Función: Mis Retos - En desarrollo')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => MisRetosScreen(token: token)),
     );
   }
 
