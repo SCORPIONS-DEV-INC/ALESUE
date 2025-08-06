@@ -131,6 +131,17 @@ def crear_estudiante_por_profesor(
     # Hashear la contraseña
     password_hash = hash_password(estudiante.password)
     
+    # Calcular la edad basada en la fecha de nacimiento
+    from app.utils.edad_utils import calcular_edad, validar_fecha_nacimiento
+    
+    if not validar_fecha_nacimiento(estudiante.fecha_nacimiento):
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha de nacimiento no es válida. El estudiante debe tener entre 5 y 25 años."
+        )
+    
+    edad_calculada = calcular_edad(estudiante.fecha_nacimiento)
+    
     try:
         # Crear el estudiante en la tabla usuarios (para autenticación)
         nuevo_usuario = Usuario(
@@ -141,7 +152,8 @@ def crear_estudiante_por_profesor(
             nombre=estudiante.nombre,
             apellido=estudiante.apellido,
             dni=estudiante.dni,
-            edad=estudiante.edad,
+            fecha_nacimiento=estudiante.fecha_nacimiento,
+            edad=edad_calculada,
             grado=estudiante.grado,
             seccion=estudiante.seccion,
             sexo=estudiante.sexo,
@@ -156,7 +168,8 @@ def crear_estudiante_por_profesor(
             dni=estudiante.dni,
             nombre=estudiante.nombre,
             apellido=estudiante.apellido,
-            edad=estudiante.edad,
+            fecha_nacimiento=estudiante.fecha_nacimiento,
+            edad=edad_calculada,
             grado=estudiante.grado,
             seccion=estudiante.seccion,
             sexo=estudiante.sexo,

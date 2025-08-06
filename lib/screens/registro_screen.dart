@@ -14,7 +14,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _apellidoController = TextEditingController();
   final _dniController = TextEditingController();
   final _correoController = TextEditingController();
-  final _edadController = TextEditingController();
+  final _fechaNacimientoController = TextEditingController();
   final _gradoController = TextEditingController();
   final _seccionController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -23,6 +23,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final AluxeDatabase _db = AluxeDatabase.instance();
   bool _isLoading = false;
   String? _error;
+  DateTime? _fechaNacimiento;
+  int? _edadCalculada;
 
   @override
   void dispose() {
@@ -30,11 +32,45 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _apellidoController.dispose();
     _dniController.dispose();
     _correoController.dispose();
-    _edadController.dispose();
+    _fechaNacimientoController.dispose();
     _gradoController.dispose();
     _seccionController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  int _calcularEdad(DateTime fechaNacimiento) {
+    final hoy = DateTime.now();
+    int edad = hoy.year - fechaNacimiento.year;
+
+    // Verificar si aún no ha cumplido años este año
+    if (hoy.month < fechaNacimiento.month ||
+        (hoy.month == fechaNacimiento.month && hoy.day < fechaNacimiento.day)) {
+      edad--;
+    }
+
+    return edad;
+  }
+
+  Future<void> _seleccionarFecha() async {
+    final DateTime? fechaSeleccionada = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2015), // Edad aproximada de 8-9 años
+      firstDate: DateTime(2000), // Estudiantes de máximo 24 años
+      lastDate: DateTime(2020), // Estudiantes de mínimo 4 años
+      locale: const Locale('es', 'ES'),
+    );
+
+    if (fechaSeleccionada != null) {
+      setState(() {
+        _fechaNacimiento = fechaSeleccionada;
+        _edadCalculada = _calcularEdad(fechaSeleccionada);
+        _fechaNacimientoController.text =
+            "${fechaSeleccionada.day.toString().padLeft(2, '0')}/"
+            "${fechaSeleccionada.month.toString().padLeft(2, '0')}/"
+            "${fechaSeleccionada.year}";
+      });
+    }
   }
 
   Future<void> _registrar() async {
@@ -42,16 +78,44 @@ class _RegistroScreenState extends State<RegistroScreen> {
     final apellido = _apellidoController.text.trim();
     final dni = _dniController.text.trim();
     final correo = _correoController.text.trim();
-    final edadStr = _edadController.text.trim();
     final grado = _gradoController.text.trim();
     final seccion = _seccionController.text.trim();
     final password = _passwordController.text.trim();
     final sexo = _sexoSeleccionado ?? '';
+
     // Validaciones
     if (nombre.isEmpty ||
         apellido.isEmpty ||
         dni.isEmpty ||
-        edadStr.isEmpty ||
+        grado.isEmpty ||
+        seccion.isEmpty ||
+        password.isEmpty ||
+        sexo.isEmpty ||
+        _fechaNacimiento == null) {
+      setState(() {
+        _error = 'Por favor, complete todos los campos obligatorios';
+      });
+      return;
+    }
+
+    // Validar DNI (debe ser numérico y tener 8 dígitos)
+    if (!dni.isNumericOnly || dni.length != 8) {
+      setState(() {
+        _error = 'El DNI debe contener exactamente 8 dígitos numéricos';
+      });
+      return;
+    }
+
+    // Validar edad calculada
+    if (_edadCalculada == null || _edadCalculada! < 5 || _edadCalculada! > 25) {
+      setState(() {
+        _error = 'El estudiante debe tener entre 5 y 25 años';
+      });
+      return;
+    }
+    if (nombre.isEmpty ||
+        apellido.isEmpty ||
+        dni.isEmpty ||
         grado.isEmpty ||
         seccion.isEmpty ||
         sexo.isEmpty ||
@@ -76,22 +140,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
       return;
     }
 
-    int edad;
-    try {
-      edad = int.parse(edadStr);
-      if (edad < 12 || edad > 100) {
-        setState(() {
-          _error = 'Edad debe estar entre 12 y 100';
-        });
-        return;
-      }
-    } on FormatException {
-      setState(() {
-        _error = 'Edad inválida';
-      });
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _error = null;
@@ -100,12 +148,18 @@ class _RegistroScreenState extends State<RegistroScreen> {
     const String tenantId = 'colegio_san_martin';
 
     try {
+      // Formatear fecha para el backend (YYYY-MM-DD)
+      final fechaFormateada =
+          "${_fechaNacimiento!.year}-"
+          "${_fechaNacimiento!.month.toString().padLeft(2, '0')}-"
+          "${_fechaNacimiento!.day.toString().padLeft(2, '0')}";
+
       // Llama a la API del backend para registrar estudiante
-      final exito = await _db.registerEstudiante(
+      final exito = await _db.registerEstudianteConFechaNacimiento(
         dni: dni,
         nombre: nombre,
         apellido: apellido,
-        edad: int.tryParse(edadStr) ?? 0,
+        fechaNacimiento: fechaFormateada,
         grado: grado,
         seccion: seccion,
         sexo: sexo,
@@ -143,11 +197,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _apellidoController.clear();
     _dniController.clear();
     _correoController.clear();
-    _edadController.clear();
+    _fechaNacimientoController.clear();
     _gradoController.clear();
     _seccionController.clear();
     _passwordController.clear();
-    _sexoSeleccionado = null;
+    setState(() {
+      _sexoSeleccionado = null;
+      _fechaNacimiento = null;
+      _edadCalculada = null;
+    });
   }
 
   @override
@@ -224,11 +282,39 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   icon: Icons.email,
                 ),
                 const SizedBox(height: 16),
-                _buildTextField(
-                  _edadController,
-                  'Edad',
-                  keyboardType: TextInputType.number,
-                  icon: Icons.cake,
+                // Campo fecha de nacimiento con DatePicker
+                GestureDetector(
+                  onTap: _seleccionarFecha,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.cake, color: Colors.grey),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _fechaNacimiento == null
+                                ? 'Fecha de nacimiento'
+                                : '${_fechaNacimientoController.text} (${_edadCalculada} años)',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: _fechaNacimiento == null
+                                  ? Colors.grey[600]
+                                  : Colors.black,
+                            ),
+                          ),
+                        ),
+                        Icon(Icons.calendar_today, color: Colors.grey),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 // Campo grado oculto, valor fijo
@@ -411,27 +497,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
       ),
     );
   }
-}
-
-Widget _buildTextField(
-  TextEditingController controller,
-  String hintText, {
-  TextInputType? keyboardType,
-}) {
-  return TextField(
-    controller: controller,
-    keyboardType: keyboardType,
-    decoration: InputDecoration(
-      hintText: hintText,
-      filled: true,
-      fillColor: Colors.grey[100],
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    ),
-  );
 }
 
 extension on String {

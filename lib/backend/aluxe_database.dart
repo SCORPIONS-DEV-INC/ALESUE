@@ -103,6 +103,51 @@ class AluxeDatabase {
     }
   }
 
+  Future<bool> registerEstudianteConFechaNacimiento({
+    required String dni,
+    required String nombre,
+    required String apellido,
+    required String fechaNacimiento,
+    required String grado,
+    required String seccion,
+    required String sexo,
+    required String correo,
+    required String tenantId,
+    String? password, // Hacer password opcional
+  }) async {
+    try {
+      final url = Uri.parse('${baseUrl}auth/crear-estudiante');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'dni': dni,
+          'nombre': nombre,
+          'apellido': apellido,
+          'fecha_nacimiento': fechaNacimiento,
+          'grado': grado,
+          'seccion': seccion,
+          'sexo': sexo,
+          'email': correo,
+          'password': password ?? "estudiante123",
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('Estudiante registrado exitosamente con fecha de nacimiento');
+        return true;
+      } else {
+        print(
+          'Error al registrar estudiante: ${response.statusCode} - ${response.body}',
+        );
+        return false;
+      }
+    } catch (e) {
+      print('Error registrando estudiante con fecha de nacimiento: $e');
+      return false;
+    }
+  }
+
   // Login (llama a /auth/login del backend)
   Future<Map<String, dynamic>?> login({
     required String username,

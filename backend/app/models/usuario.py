@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, DateTime
+from sqlalchemy import Column, Integer, String, Enum, DateTime, Date
 from sqlalchemy.sql import func
 from app.database import Base
 import enum
@@ -19,7 +19,8 @@ class Usuario(Base):
     nombre = Column(String, nullable=False)
     apellido = Column(String, nullable=False)
     dni = Column(String, unique=True, nullable=False)  # Obligatorio para todos los usuarios
-    edad = Column(Integer, nullable=True)  # Solo para estudiantes
+    fecha_nacimiento = Column(Date, nullable=True)  # Solo para estudiantes
+    edad = Column(Integer, nullable=True)  # Solo para estudiantes, se calculará automáticamente
     grado = Column(String, nullable=True)  # Solo para estudiantes
     seccion = Column(String, nullable=True)  # Solo para estudiantes
     sexo = Column(String, nullable=True)

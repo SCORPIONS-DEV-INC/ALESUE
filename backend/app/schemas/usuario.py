@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 from typing import Optional
+from datetime import date
 from app.models.usuario import RolEnum
 
 class UsuarioBase(BaseModel):
@@ -9,11 +10,21 @@ class UsuarioBase(BaseModel):
     apellido: str
     rol: RolEnum
     dni: str  # Obligatorio para todos
-    edad: Optional[int] = None
+    fecha_nacimiento: Optional[date] = None  # Solo para estudiantes
+    edad: Optional[int] = None  # Se calculará automáticamente para estudiantes
     grado: Optional[str] = None
     seccion: Optional[str] = None
     sexo: Optional[str] = None
     tenant_id: str = "default"
+
+    @validator('edad', always=True)
+    def calcular_edad_automatica(cls, v, values):
+        """Calcula la edad automáticamente para estudiantes"""
+        if (values.get('rol') == RolEnum.ESTUDIANTE and 
+            'fecha_nacimiento' in values and values['fecha_nacimiento']):
+            from app.utils.edad_utils import calcular_edad
+            return calcular_edad(values['fecha_nacimiento'])
+        return v
 
 class UsuarioCreate(UsuarioBase):
     password: str
@@ -45,13 +56,22 @@ class EstudianteCreateByProfesor(BaseModel):
     dni: str
     nombre: str
     apellido: str
-    edad: int
+    fecha_nacimiento: date  # Nueva fecha de nacimiento
+    edad: Optional[int] = None  # Se calculará automáticamente
     grado: str
     seccion: str
     sexo: str
     email: Optional[str] = None  # Email opcional
     password: str
     tenant_id: str = "default"
+
+    @validator('edad', always=True)
+    def calcular_edad_automatica(cls, v, values):
+        """Calcula la edad automáticamente basada en la fecha de nacimiento"""
+        if 'fecha_nacimiento' in values and values['fecha_nacimiento']:
+            from app.utils.edad_utils import calcular_edad
+            return calcular_edad(values['fecha_nacimiento'])
+        return v
 
 # Esquema para ranking
 class RankingEstudiante(BaseModel):
