@@ -114,7 +114,7 @@ class _RegistroEstudianteScreenState extends State<RegistroEstudianteScreen> {
         grado: grado,
         seccion: seccion,
         sexo: sexo,
-        tenantId: "colegio_san_martin",
+        tenantId: "Sifredo Suñiga Quintos",
       );
 
       ScaffoldMessenger.of(
