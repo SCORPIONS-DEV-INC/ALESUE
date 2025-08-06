@@ -3,8 +3,8 @@ import 'crear_estudiante_screen.dart';
 import 'crear_reto_screen.dart';
 import 'mis_retos_screen.dart';
 import 'ranking_screen.dart';
-import 'retos_materia_screen.dart';
 import 'progreso_screen.dart';
+import 'materias_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   // Recibe los datos del login (incluye token y user_info)
@@ -175,7 +175,7 @@ class HomeScreen extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // Puntos por materia
+          // Información del estudiante
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -183,34 +183,19 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Puntos por Materia',
+                    'Información Personal',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
-                  _buildPuntosMateria(
-                    'Matemáticas',
-                    userInfo['puntos_matematicas'] ?? 0,
-                    Colors.red,
+                  _buildInfoRow('DNI:', userInfo['dni'] ?? 'No disponible'),
+                  _buildInfoRow('Grado:', userInfo['grado'] ?? 'No disponible'),
+                  _buildInfoRow(
+                    'Sección:',
+                    userInfo['seccion'] ?? 'No disponible',
                   ),
-                  _buildPuntosMateria(
-                    'Comunicación',
-                    userInfo['puntos_comunicacion'] ?? 0,
-                    Colors.green,
-                  ),
-                  _buildPuntosMateria(
-                    'Personal Social',
-                    userInfo['puntos_personal_social'] ?? 0,
-                    Colors.orange,
-                  ),
-                  _buildPuntosMateria(
-                    'Ciencia y Tecnología',
-                    userInfo['puntos_ciencia_tecnologia'] ?? 0,
-                    Colors.purple,
-                  ),
-                  _buildPuntosMateria(
-                    'Inglés',
-                    userInfo['puntos_ingles'] ?? 0,
-                    Colors.blue,
+                  _buildInfoRow(
+                    'Edad:',
+                    '${userInfo['edad'] ?? 'No disponible'} años',
                   ),
                 ],
               ),
@@ -219,7 +204,7 @@ class HomeScreen extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // Opciones del estudiante
+          // Opciones del estudiante (solo 2 opciones principales)
           Expanded(
             child: GridView.count(
               crossAxisCount: 2,
@@ -228,39 +213,10 @@ class HomeScreen extends StatelessWidget {
               children: [
                 _buildMenuCard(
                   context,
-                  'Matemáticas',
-                  Icons.calculate,
-                  Colors.red,
-                  () => _navigateToMateria(context, token, 'matematicas'),
-                ),
-                _buildMenuCard(
-                  context,
-                  'Comunicación',
-                  Icons.chat,
-                  Colors.green,
-                  () => _navigateToMateria(context, token, 'comunicacion'),
-                ),
-                _buildMenuCard(
-                  context,
-                  'Personal Social',
-                  Icons.people,
-                  Colors.orange,
-                  () => _navigateToMateria(context, token, 'personal_social'),
-                ),
-                _buildMenuCard(
-                  context,
-                  'Ciencia y Tecnología',
-                  Icons.science,
-                  Colors.purple,
-                  () =>
-                      _navigateToMateria(context, token, 'ciencia_tecnologia'),
-                ),
-                _buildMenuCard(
-                  context,
-                  'Inglés',
-                  Icons.language,
+                  'Mis Materias',
+                  Icons.book,
                   Colors.blue,
-                  () => _navigateToMateria(context, token, 'ingles'),
+                  () => _navigateToMaterias(context, token, userInfo),
                 ),
                 _buildMenuCard(
                   context,
@@ -277,24 +233,14 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPuntosMateria(String materia, int puntos, Color color) {
+  Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(materia),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '$puntos pts',
-              style: TextStyle(color: color, fontWeight: FontWeight.bold),
-            ),
-          ),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(value),
         ],
       ),
     );
@@ -417,23 +363,15 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _navigateToMateria(BuildContext context, String token, String materia) {
-    final materiaNombres = {
-      'matematicas': 'Matemáticas',
-      'comunicacion': 'Comunicación',
-      'personal_social': 'Personal Social',
-      'ciencia_tecnologia': 'Ciencia y Tecnología',
-      'ingles': 'Inglés',
-    };
-
+  void _navigateToMaterias(
+    BuildContext context,
+    String token,
+    Map<String, dynamic> userInfo,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RetosMateriaScreen(
-          token: token,
-          materia: materia,
-          materiaNombre: materiaNombres[materia] ?? materia,
-        ),
+        builder: (context) => MateriasScreen(token: token, userInfo: userInfo),
       ),
     );
   }

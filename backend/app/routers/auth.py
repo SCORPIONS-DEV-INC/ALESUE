@@ -97,11 +97,19 @@ def crear_estudiante_por_profesor(
 ):
     """Permite a un profesor crear una cuenta de estudiante"""
     
-    # Verificar si el DNI ya existe
+    # Verificar si el DNI ya existe en usuarios
     if db.query(Usuario).filter(Usuario.dni == estudiante.dni).first():
         raise HTTPException(
             status_code=400,
-            detail="El DNI ya está registrado"
+            detail="El DNI ya está registrado en usuarios"
+        )
+    
+    # Verificar si el DNI ya existe en estudiantes
+    from app.models.estudiante import Estudiante
+    if db.query(Estudiante).filter(Estudiante.dni == estudiante.dni).first():
+        raise HTTPException(
+            status_code=400,
+            detail="El DNI ya está registrado en estudiantes"
         )
     
     # Verificar si el email ya existe (solo si se proporciona)
@@ -123,27 +131,55 @@ def crear_estudiante_por_profesor(
     # Hashear la contraseña
     password_hash = hash_password(estudiante.password)
     
-    # Crear el estudiante
-    nuevo_estudiante = Usuario(
-        username=estudiante.dni,  # DNI como username
-        email=email_final,
-        password_hash=password_hash,
-        rol="estudiante",
-        nombre=estudiante.nombre,
-        apellido=estudiante.apellido,
-        dni=estudiante.dni,
-        edad=estudiante.edad,
-        grado=estudiante.grado,
-        seccion=estudiante.seccion,
-        sexo=estudiante.sexo,
-        tenant_id=current_user.tenant_id  # Mismo tenant que el profesor
-    )
-    
-    db.add(nuevo_estudiante)
-    db.commit()
-    db.refresh(nuevo_estudiante)
-    
-    return nuevo_estudiante
+    try:
+        # Crear el estudiante en la tabla usuarios (para autenticación)
+        nuevo_usuario = Usuario(
+            username=estudiante.dni,  # DNI como username
+            email=email_final,
+            password_hash=password_hash,
+            rol="estudiante",
+            nombre=estudiante.nombre,
+            apellido=estudiante.apellido,
+            dni=estudiante.dni,
+            edad=estudiante.edad,
+            grado=estudiante.grado,
+            seccion=estudiante.seccion,
+            sexo=estudiante.sexo,
+            tenant_id=current_user.tenant_id  # Mismo tenant que el profesor
+        )
+        
+        db.add(nuevo_usuario)
+        db.flush()  # Para obtener el ID generado
+        
+        # Crear el estudiante en la tabla estudiantes (para funcionalidad específica)
+        nuevo_estudiante = Estudiante(
+            dni=estudiante.dni,
+            nombre=estudiante.nombre,
+            apellido=estudiante.apellido,
+            edad=estudiante.edad,
+            grado=estudiante.grado,
+            seccion=estudiante.seccion,
+            sexo=estudiante.sexo,
+            correo=email_final,
+            password=estudiante.password,  # Contraseña sin hashear para referencia
+            tenant_id=current_user.tenant_id
+        )
+        
+        db.add(nuevo_estudiante)
+        db.commit()
+        db.refresh(nuevo_usuario)
+        
+        print(f"[SUCCESS] Estudiante creado - Usuario ID: {nuevo_usuario.id}, Estudiante DNI: {nuevo_estudiante.dni}")
+        
+        return nuevo_usuario
+        
+    except Exception as e:
+        db.rollback()
+        print(f"[ERROR] Error al crear estudiante: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error interno al crear el estudiante: {str(e)}"
+        )
 
 @router.get("/ranking", response_model=List[RankingEstudiante])
 def obtener_ranking(
