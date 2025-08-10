@@ -2,26 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:aluxe/backend/aluxe_database.dart';
 
-class Pregunta {
-  String texto;
-  List<String> opciones;
-  int respuestaCorrecta; // Índice de la respuesta correcta (0-3)
-
-  Pregunta({
-    required this.texto,
-    required this.opciones,
-    required this.respuestaCorrecta,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'texto': texto,
-      'opciones': opciones,
-      'respuesta_correcta': respuestaCorrecta,
-    };
-  }
-}
-
 class CrearRetoScreen extends StatefulWidget {
   final String token;
 
@@ -44,35 +24,40 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
   String? _error;
   final AluxeDatabase _db = AluxeDatabase.instance();
 
-  // Nuevas variables para las preguntas
-  List<Pregunta> _preguntas = [];
-  int _currentTab = 0; // 0: info básica, 1: preguntas
-  late TabController _tabController;
+  int _currentStep = 0; // 0: info básica, 1: configuración, 2: revisión
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   final List<Map<String, String>> _materias = [
-    {'value': 'matematicas', 'label': 'Matemáticas'},
-    {'value': 'comunicacion', 'label': 'Comunicación'},
-    {'value': 'personal_social', 'label': 'Personal Social'},
-    {'value': 'ciencia_tecnologia', 'label': 'Ciencia y Tecnología'},
-    {'value': 'ingles', 'label': 'Inglés'},
+    {'value': 'matematicas', 'label': 'Matemáticas', 'emoji': '📐'},
+    {'value': 'comunicacion', 'label': 'Comunicación', 'emoji': '📚'},
+    {'value': 'personal_social', 'label': 'Personal Social', 'emoji': '🏛️'},
+    {
+      'value': 'ciencia_tecnologia',
+      'label': 'Ciencia y Tecnología',
+      'emoji': '🔬',
+    },
+    {'value': 'ingles', 'label': 'Inglés', 'emoji': '🌎'},
   ];
 
   final List<Map<String, String>> _niveles = [
-    {'value': 'facil', 'label': 'Fácil'},
-    {'value': 'medio', 'label': 'Medio'},
-    {'value': 'dificil', 'label': 'Difícil'},
+    {'value': 'facil', 'label': 'Fácil', 'emoji': '😊', 'color': '4CAF50'},
+    {'value': 'medio', 'label': 'Medio', 'emoji': '😐', 'color': 'FF9800'},
+    {'value': 'dificil', 'label': 'Difícil', 'emoji': '😤', 'color': 'F44336'},
   ];
 
   @override
   void initState() {
     super.initState();
     _puntosController.text = '10'; // Valor por defecto
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      setState(() {
-        _currentTab = _tabController.index;
-      });
-    });
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _animationController.forward();
   }
 
   @override
@@ -80,7 +65,7 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
     _tituloController.dispose();
     _descripcionController.dispose();
     _puntosController.dispose();
-    _tabController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -103,53 +88,53 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
       return;
     }
 
-    if (_preguntas.isEmpty) {
-      setState(() {
-        _error = 'Debes agregar al menos una pregunta al reto';
-      });
-      return;
-    }
-
-    if (!_validarPreguntas()) {
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final resultado = await _db.createRetoConPreguntas(
+      final resultado = await _db.createReto(
         token: widget.token,
         titulo: _tituloController.text.trim(),
-        descripcion: _descripcionController.text.trim(),
+        descripcion: _descripcionController.text.trim().isEmpty
+            ? 'Sin descripción'
+            : _descripcionController.text.trim(),
         puntos: int.parse(_puntosController.text.trim()),
         nivel: _nivelSeleccionado!,
         materia: _materiaSeleccionada!,
         tenantId: "default",
-        preguntas: _preguntas,
       );
 
-      if (resultado != null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Reto creado exitosamente'),
-              backgroundColor: Colors.green,
+      if (resultado != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('¡Reto creado exitosamente!'),
+              ],
             ),
-          );
-          Navigator.pop(context, true); // Retornar true para indicar éxito
-        }
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+        Navigator.pop(context, true);
       } else {
         setState(() {
           _error = 'Error al crear el reto';
         });
       }
     } catch (e) {
-      setState(() {
-        _error = 'Error: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _error = 'Error: $e';
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -162,617 +147,679 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
   Color _getMateriaColor(String materia) {
     switch (materia) {
       case 'matematicas':
-        return Colors.blue;
+        return const Color(0xFF2196F3);
       case 'comunicacion':
-        return Colors.green;
+        return const Color(0xFF4CAF50);
       case 'personal_social':
-        return Colors.orange;
+        return const Color(0xFFFF9800);
       case 'ciencia_tecnologia':
-        return Colors.purple;
+        return const Color(0xFF9C27B0);
       case 'ingles':
-        return Colors.red;
+        return const Color(0xFFE91E63);
       default:
         return Colors.grey;
     }
   }
 
-  IconData _getMateriaIcon(String materia) {
-    switch (materia) {
-      case 'matematicas':
-        return Icons.calculate;
-      case 'comunicacion':
-        return Icons.book;
-      case 'personal_social':
-        return Icons.people;
-      case 'ciencia_tecnologia':
-        return Icons.science;
-      case 'ingles':
-        return Icons.language;
+  Color _getNivelColor(String nivel) {
+    switch (nivel) {
+      case 'facil':
+        return const Color(0xFF4CAF50);
+      case 'medio':
+        return const Color(0xFFFF9800);
+      case 'dificil':
+        return const Color(0xFFF44336);
       default:
-        return Icons.subject;
+        return Colors.grey;
     }
   }
 
-  // Métodos para manejar preguntas
-  void _agregarPregunta() {
-    setState(() {
-      _preguntas.add(
-        Pregunta(texto: '', opciones: ['', '', '', ''], respuestaCorrecta: 0),
-      );
-    });
-  }
-
-  void _eliminarPregunta(int index) {
-    setState(() {
-      _preguntas.removeAt(index);
-    });
-  }
-
-  void _actualizarPregunta(int index, String campo, dynamic valor) {
-    setState(() {
-      switch (campo) {
-        case 'texto':
-          _preguntas[index].texto = valor;
-          break;
-        case 'respuesta_correcta':
-          _preguntas[index].respuestaCorrecta = valor;
-          break;
-        case 'opcion':
-          int opcionIndex = valor['index'];
-          String textoOpcion = valor['texto'];
-          _preguntas[index].opciones[opcionIndex] = textoOpcion;
-          break;
-      }
-    });
-  }
-
-  bool _validarPreguntas() {
-    for (int i = 0; i < _preguntas.length; i++) {
-      final pregunta = _preguntas[i];
-
-      if (pregunta.texto.trim().isEmpty) {
-        setState(() {
-          _error = 'La pregunta ${i + 1} no puede estar vacía';
-        });
-        return false;
-      }
-
-      if (pregunta.opciones.any((opcion) => opcion.trim().isEmpty)) {
-        setState(() {
-          _error =
-              'Todas las opciones de la pregunta ${i + 1} deben tener texto';
-        });
-        return false;
-      }
-
-      if (pregunta.opciones.toSet().length != pregunta.opciones.length) {
-        setState(() {
-          _error =
-              'Las opciones de la pregunta ${i + 1} no pueden ser duplicadas';
-        });
-        return false;
-      }
+  void _nextStep() {
+    if (_currentStep < 2) {
+      setState(() {
+        _currentStep++;
+      });
+      _animationController.reset();
+      _animationController.forward();
     }
-    return true;
+  }
+
+  void _previousStep() {
+    if (_currentStep > 0) {
+      setState(() {
+        _currentStep--;
+      });
+      _animationController.reset();
+      _animationController.forward();
+    }
+  }
+
+  bool _canProceedToNext() {
+    switch (_currentStep) {
+      case 0:
+        // Descripción es opcional ahora
+        return _tituloController.text.isNotEmpty &&
+            _puntosController.text.isNotEmpty;
+      case 1:
+        return _materiaSeleccionada != null && _nivelSeleccionado != null;
+      default:
+        return false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Crear Reto'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(icon: Icon(Icons.info), text: 'Información'),
-            Tab(icon: Icon(Icons.quiz), text: 'Preguntas'),
-          ],
+        title: const Text(
+          'Crear Nuevo Reto',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildInfoTab(), _buildPreguntasTab()],
-      ),
-      floatingActionButton: _currentTab == 1
-          ? FloatingActionButton(
-              onPressed: _agregarPregunta,
-              backgroundColor: Colors.indigo,
-              child: const Icon(Icons.add, color: Colors.white),
-              tooltip: 'Agregar pregunta',
-            )
-          : null,
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        child: ElevatedButton(
-          onPressed: _isLoading ? null : _crearReto,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.indigo,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(80),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                for (int i = 0; i < 3; i++) ...[
+                  Expanded(
+                    child: Container(
+                      height: 4,
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        color: i <= _currentStep
+                            ? const Color(0xFF6366F1)
+                            : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          child: _isLoading
-              ? const CircularProgressIndicator(color: Colors.white)
-              : const Text(
-                  'Crear Reto',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: FadeTransition(opacity: _fadeAnimation, child: _buildCurrentStep()),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            if (_currentStep > 0)
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _previousStep,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Anterior'),
                 ),
+              ),
+            if (_currentStep > 0) const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _isLoading
+                    ? null
+                    : (_currentStep == 2
+                          ? _crearReto
+                          : (_canProceedToNext() ? _nextStep : null)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6366F1),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : Text(
+                        _currentStep == 2 ? 'Crear Reto' : 'Siguiente',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoTab() {
+  Widget _buildCurrentStep() {
+    switch (_currentStep) {
+      case 0:
+        return _buildInfoStep();
+      case 1:
+        return _buildConfigStep();
+      case 2:
+        return _buildReviewStep();
+      default:
+        return Container();
+    }
+  }
+
+  Widget _buildInfoStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(20),
       child: Form(
         key: _formKey,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text(
+              'Información Básica',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Proporciona los detalles principales de tu reto',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 32),
+
             if (_error != null)
               Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 24),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade100,
-                  border: Border.all(color: Colors.red),
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red[200]!),
                 ),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                child: Row(
+                  children: [
+                    Icon(Icons.error, color: Colors.red[700], size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: TextStyle(color: Colors.red[700]),
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
-            // Título del reto
-            TextFormField(
+            _buildInputField(
               controller: _tituloController,
-              decoration: const InputDecoration(
-                labelText: 'Título del Reto',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.title),
-                hintText: 'Ej: Multiplicación de fracciones',
-              ),
+              label: 'Título del Reto',
+              hint: 'Ej: Suma de fracciones con denominadores diferentes',
+              icon: Icons.title,
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value?.isEmpty ?? true) {
                   return 'El título es obligatorio';
                 }
-                if (value.length < 5) {
+                if (value!.length < 5) {
                   return 'El título debe tener al menos 5 caracteres';
                 }
                 return null;
               },
             ),
-            const SizedBox(height: 16),
 
-            // Descripción
-            TextFormField(
+            const SizedBox(height: 24),
+
+            _buildInputField(
               controller: _descripcionController,
-              decoration: const InputDecoration(
-                labelText: 'Descripción del Reto',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.description),
-                hintText: 'Describe qué debe hacer el estudiante...',
-              ),
+              label: 'Descripción (Opcional)',
+              hint:
+                  'Describe qué deben hacer los estudiantes para completar este reto...',
+              icon: Icons.description,
               maxLines: 4,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'La descripción es obligatoria';
-                }
-                if (value.length < 20) {
-                  return 'La descripción debe tener al menos 20 caracteres';
-                }
-                return null;
-              },
+              // Sin validador - descripción opcional
             ),
-            const SizedBox(height: 16),
 
-            // Materia
-            DropdownButtonFormField<String>(
-              value: _materiaSeleccionada,
-              decoration: const InputDecoration(
-                labelText: 'Materia',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.subject),
-              ),
-              items: _materias.map((materia) {
-                return DropdownMenuItem<String>(
-                  value: materia['value'],
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: _getMateriaColor(materia['value']!),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Icon(
-                          _getMateriaIcon(materia['value']!),
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(materia['label']!),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _materiaSeleccionada = value;
-                });
-              },
-              validator: (value) {
-                if (value == null) {
-                  return 'La materia es obligatoria';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-            // Nivel
-            DropdownButtonFormField<String>(
-              value: _nivelSeleccionado,
-              decoration: const InputDecoration(
-                labelText: 'Nivel de Dificultad',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.trending_up),
-              ),
-              items: _niveles.map((nivel) {
-                Color color = Colors.grey;
-                IconData icon = Icons.help;
-
-                switch (nivel['value']) {
-                  case 'facil':
-                    color = Colors.green;
-                    icon = Icons.sentiment_satisfied;
-                    break;
-                  case 'medio':
-                    color = Colors.orange;
-                    icon = Icons.sentiment_neutral;
-                    break;
-                  case 'dificil':
-                    color = Colors.red;
-                    icon = Icons.sentiment_very_dissatisfied;
-                    break;
-                }
-
-                return DropdownMenuItem<String>(
-                  value: nivel['value'],
-                  child: Row(
-                    children: [
-                      Icon(icon, color: color, size: 20),
-                      const SizedBox(width: 8),
-                      Text(nivel['label']!),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _nivelSeleccionado = value;
-                });
-              },
-              validator: (value) {
-                if (value == null) {
-                  return 'El nivel es obligatorio';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Puntos
-            TextFormField(
+            _buildInputField(
               controller: _puntosController,
-              decoration: const InputDecoration(
-                labelText: 'Puntos por Completar',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.star),
-                suffixText: 'pts',
-              ),
+              label: 'Puntos a Otorgar',
+              hint: 'Cantidad de puntos por completar el reto',
+              icon: Icons.star,
               keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(3),
-              ],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value?.isEmpty ?? true) {
                   return 'Los puntos son obligatorios';
                 }
-                final puntos = int.tryParse(value);
-                if (puntos == null || puntos < 1 || puntos > 100) {
-                  return 'Los puntos deben estar entre 1 y 100';
+                final puntos = int.tryParse(value!);
+                if (puntos == null || puntos <= 0) {
+                  return 'Ingresa un número válido mayor a 0';
                 }
                 return null;
               },
             ),
-            const SizedBox(height: 32),
-
-            // Vista previa del reto
-            if (_materiaSeleccionada != null || _nivelSeleccionado != null)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Vista Previa:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_materiaSeleccionada != null)
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getMateriaColor(_materiaSeleccionada!),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _getMateriaIcon(_materiaSeleccionada!),
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _materias.firstWhere(
-                                    (m) => m['value'] == _materiaSeleccionada,
-                                  )['label']!,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (_nivelSeleccionado != null) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _nivelSeleccionado == 'facil'
-                                    ? Colors.green
-                                    : _nivelSeleccionado == 'medio'
-                                    ? Colors.orange
-                                    : Colors.red,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                _niveles.firstWhere(
-                                  (n) => n['value'] == _nivelSeleccionado,
-                                )['label']!,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 80), // Espacio para el botón
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPreguntasTab() {
-    return Column(
-      children: [
-        if (_preguntas.isEmpty)
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.quiz, size: 64, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay preguntas agregadas',
-                    style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+  Widget _buildConfigStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Configuración',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Selecciona la materia y nivel de dificultad',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 32),
+
+          const Text(
+            'Materia',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF374151),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: _materias.map((materia) {
+              final isSelected = _materiaSeleccionada == materia['value'];
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _materiaSeleccionada = materia['value'];
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Toca el botón + para agregar una pregunta',
-                    style: TextStyle(color: Colors.grey.shade500),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? _getMateriaColor(materia['value']!)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected
+                          ? _getMateriaColor(materia['value']!)
+                          : Colors.grey[300]!,
+                      width: 2,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: _getMateriaColor(
+                                materia['value']!,
+                              ).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        materia['emoji']!,
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        materia['label']!,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: isSelected ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 40),
+
+          const Text(
+            'Nivel de Dificultad',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF374151),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Column(
+            children: _niveles.map((nivel) {
+              final isSelected = _nivelSeleccionado == nivel['value'];
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _nivelSeleccionado = nivel['value'];
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? _getNivelColor(nivel['value']!)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected
+                          ? _getNivelColor(nivel['value']!)
+                          : Colors.grey[300]!,
+                      width: 2,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: _getNivelColor(
+                                nivel['value']!,
+                              ).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        nivel['emoji']!,
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          nivel['label']!,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (isSelected)
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Revisión Final',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Revisa todos los detalles antes de crear el reto',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 32),
+
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildReviewItem('Título', _tituloController.text, Icons.title),
+                const Divider(height: 32),
+                _buildReviewItem(
+                  'Descripción',
+                  _descripcionController.text.isEmpty
+                      ? 'Sin descripción'
+                      : _descripcionController.text,
+                  Icons.description,
+                ),
+                const Divider(height: 32),
+                _buildReviewItem(
+                  'Materia',
+                  _materias.firstWhere(
+                    (m) => m['value'] == _materiaSeleccionada,
+                  )['label']!,
+                  Icons.book,
+                  color: _getMateriaColor(_materiaSeleccionada!),
+                ),
+                const Divider(height: 32),
+                _buildReviewItem(
+                  'Nivel',
+                  _niveles.firstWhere(
+                    (n) => n['value'] == _nivelSeleccionado,
+                  )['label']!,
+                  Icons.speed,
+                  color: _getNivelColor(_nivelSeleccionado!),
+                ),
+                const Divider(height: 32),
+                _buildReviewItem(
+                  'Puntos',
+                  '${_puntosController.text} puntos',
+                  Icons.star,
+                  color: Colors.amber,
+                ),
+              ],
+            ),
+          ),
+
+          if (_error != null) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error, color: Colors.red[700], size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: TextStyle(color: Colors.red[700]),
+                    ),
                   ),
                 ],
               ),
             ),
-          )
-        else
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _preguntas.length,
-              itemBuilder: (context, index) {
-                return _buildPreguntaCard(index);
-              },
-            ),
-          ),
+          ],
 
-        // Información sobre preguntas
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.blue.shade50,
-          child: Row(
-            children: [
-              Icon(Icons.info, color: Colors.blue.shade600),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Preguntas: ${_preguntas.length}/10',
-                  style: TextStyle(
-                    color: Colors.blue.shade600,
-                    fontWeight: FontWeight.w500,
+          const SizedBox(height: 24),
+
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F9FF),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFBAE6FD)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info, color: Color(0xFF0284C7)),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Una vez creado, los estudiantes podrán ver y completar este reto.',
+                    style: TextStyle(color: Color(0xFF0F172A)),
                   ),
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewItem(
+    String label,
+    String value,
+    IconData icon, {
+    Color? color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20, color: color ?? Colors.grey[600]),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
               ),
-            ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1F2937),
           ),
         ),
-        const SizedBox(height: 80), // Espacio para el botón
       ],
     );
   }
 
-  Widget _buildPreguntaCard(int index) {
-    final pregunta = _preguntas[index];
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header de la pregunta
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Colors.indigo,
-                  radius: 12,
-                  child: Text(
-                    '${index + 1}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Pregunta',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => _eliminarPregunta(index),
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  tooltip: 'Eliminar pregunta',
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Texto de la pregunta
-            TextFormField(
-              initialValue: pregunta.texto,
-              decoration: const InputDecoration(
-                labelText: 'Enunciado de la pregunta',
-                border: OutlineInputBorder(),
-                hintText: 'Escribe la pregunta aquí...',
-              ),
-              maxLines: 2,
-              onChanged: (value) {
-                _actualizarPregunta(index, 'texto', value);
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Opciones
-            const Text(
-              'Opciones de respuesta:',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-
-            ...List.generate(4, (opcionIndex) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Radio<int>(
-                      value: opcionIndex,
-                      groupValue: pregunta.respuestaCorrecta,
-                      onChanged: (value) {
-                        _actualizarPregunta(index, 'respuesta_correcta', value);
-                      },
-                      activeColor: Colors.green,
-                    ),
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: pregunta.opciones[opcionIndex],
-                        decoration: InputDecoration(
-                          labelText:
-                              'Opción ${String.fromCharCode(65 + opcionIndex)}',
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        onChanged: (value) {
-                          _actualizarPregunta(index, 'opcion', {
-                            'index': opcionIndex,
-                            'texto': value,
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-            // Indicador de respuesta correcta
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.green.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.green.shade600,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Respuesta correcta: Opción ${String.fromCharCode(65 + pregunta.respuestaCorrecta)}',
-                    style: TextStyle(
-                      color: Colors.green.shade700,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF374151),
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, color: const Color(0xFF6366F1)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          validator: validator,
+        ),
+      ],
     );
   }
 }

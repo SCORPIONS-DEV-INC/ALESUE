@@ -12,7 +12,7 @@ class AluxeDatabase {
   // Verificar estado del backend
   Future<bool> checkBackendHealth() async {
     try {
-      final url = Uri.parse('${baseUrl}');
+      final url = Uri.parse(baseUrl);
       final response = await http.get(url);
       print('Backend health check: ${response.statusCode} - ${response.body}');
       return response.statusCode == 200;
@@ -467,6 +467,86 @@ class AluxeDatabase {
       }
     } catch (e) {
       print('Error en getMisRetos: $e');
+      rethrow;
+    }
+  }
+
+  // Eliminar reto (solo profesores)
+  Future<bool> eliminarReto({
+    required String token,
+    required int retoId,
+  }) async {
+    try {
+      final url = Uri.parse('${baseUrl}retos/$retoId');
+      print('Eliminando reto: $url');
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('Eliminar reto status code: ${response.statusCode}');
+      print('Eliminar reto response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['detail'] ?? 'Error al eliminar el reto');
+      }
+    } catch (e) {
+      print('Error en eliminarReto: $e');
+      rethrow;
+    }
+  }
+
+  // Actualizar reto (solo profesores)
+  Future<bool> actualizarReto({
+    required String token,
+    required int retoId,
+    required String titulo,
+    required String descripcion,
+    required int puntos,
+    required String nivel,
+    required String materia,
+  }) async {
+    try {
+      final url = Uri.parse('${baseUrl}retos/$retoId');
+      print('Actualizando reto: $url');
+
+      final requestBody = {
+        'titulo': titulo,
+        'descripcion': descripcion,
+        'puntos': puntos,
+        'nivel': nivel,
+        'materia': materia,
+      };
+
+      print('Body del request actualizar: $requestBody');
+
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      print('Actualizar reto status code: ${response.statusCode}');
+      print('Actualizar reto response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['detail'] ?? 'Error al actualizar el reto');
+      }
+    } catch (e) {
+      print('Error en actualizarReto: $e');
       rethrow;
     }
   }

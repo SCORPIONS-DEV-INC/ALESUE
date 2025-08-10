@@ -302,7 +302,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                           child: Text(
                             _fechaNacimiento == null
                                 ? 'Fecha de nacimiento'
-                                : '${_fechaNacimientoController.text} (${_edadCalculada} años)',
+                                : '${_fechaNacimientoController.text} ($_edadCalculada años)',
                             style: TextStyle(
                               fontSize: 16,
                               color: _fechaNacimiento == null
