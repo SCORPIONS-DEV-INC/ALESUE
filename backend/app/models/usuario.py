@@ -33,5 +33,6 @@ class Usuario(Base):
     puntos_totales = Column(Integer, nullable=False, default=0)
     activo = Column(String, nullable=False, default="true")
     tenant_id = Column(String, nullable=False, default="default")
+    profile_image_url = Column(String, nullable=True)
     # Removido temporalmente: created_at = Column(DateTime(timezone=True), server_default=func.now())
     # Removido temporalmente: updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -5,6 +5,7 @@ import 'mis_retos_screen.dart';
 import 'ranking_screen.dart';
 import 'progreso_screen.dart';
 import 'materias_screen.dart';
+import 'perfil_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   // Recibe los datos del login (incluye token y user_info)
@@ -30,13 +31,37 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Bienvenido, $nombre'),
+        automaticallyImplyLeading: false,
+        elevation: 2,
         backgroundColor: rol == 'profesor' ? Colors.green : Colors.blue,
+        title: Row(
+          children: [
+            const Icon(Icons.school, color: Colors.white, size: 28),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Bienvenido, $nombre',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.account_circle, color: Colors.white),
+            tooltip: 'Perfil',
             onPressed: () {
-              Navigator.pushReplacementNamed(context, '/');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PerfilScreen(userInfo: userInfo),
+                ),
+              );
             },
           ),
         ],

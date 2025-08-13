@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import estudiantes, auth, retos
+from app.routers import usuarios
 from app.database import Base, engine
 from app.models import estudiante, usuario, reto  
 
@@ -32,6 +33,7 @@ app.add_middleware(
 app.include_router(estudiantes.router)
 app.include_router(auth.router)
 app.include_router(retos.router)
+app.include_router(usuarios.router)
 
 # ✅ Ruta base de prueba
 @app.get("/")

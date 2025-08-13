@@ -16,6 +16,7 @@ class UsuarioBase(BaseModel):
     seccion: Optional[str] = None
     sexo: Optional[str] = None
     tenant_id: str = "default"
+    profile_image_url: Optional[str] = None
 
     @validator('edad', always=True)
     def calcular_edad_automatica(cls, v, values):
