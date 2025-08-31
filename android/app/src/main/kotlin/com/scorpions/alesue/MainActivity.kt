@@ -1,4 +1,4 @@
-package com.scorpions.aluxe
+package com.scorpions.alesue
 
 import io.flutter.embedding.android.FlutterActivity
 

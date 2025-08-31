@@ -11,6 +11,36 @@ class CrearRetoScreen extends StatefulWidget {
   State<CrearRetoScreen> createState() => _CrearRetoScreenState();
 }
 
+enum TipoPregunta { opcionMultiple, respuestaCorta }
+
+class PreguntaFormulario {
+  String enunciado;
+  TipoPregunta tipo;
+  List<String> opciones; // solo para opción múltiple
+  int? respuestaCorrecta; // solo para opción múltiple
+  String? respuestaCorta; // solo para respuesta corta
+
+  PreguntaFormulario({
+    required this.enunciado,
+    required this.tipo,
+    this.opciones = const [],
+    this.respuestaCorrecta,
+    this.respuestaCorta,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'enunciado': enunciado,
+      'tipo': tipo == TipoPregunta.opcionMultiple
+          ? 'opcion_multiple'
+          : 'respuesta_corta',
+      'opciones': opciones,
+      'respuestaCorrecta': respuestaCorrecta,
+      'respuestaCorta': respuestaCorta,
+    };
+  }
+}
+
 class _CrearRetoScreenState extends State<CrearRetoScreen>
     with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
@@ -24,7 +54,8 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
   String? _error;
   final AluxeDatabase _db = AluxeDatabase.instance();
 
-  int _currentStep = 0; // 0: info básica, 1: configuración, 2: revisión
+  int _currentStep =
+      0; // 0: info básica, 1: configuración, 2: preguntas, 3: revisión
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -46,10 +77,15 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
     {'value': 'dificil', 'label': 'Difícil', 'emoji': '😤', 'color': 'F44336'},
   ];
 
+  List<PreguntaFormulario> _preguntas = [];
+
   @override
   void initState() {
     super.initState();
     _puntosController.text = '10'; // Valor por defecto
+    _tituloController.addListener(_onTextChanged);
+    _descripcionController.addListener(_onTextChanged);
+    _puntosController.addListener(_onTextChanged);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -62,6 +98,9 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
 
   @override
   void dispose() {
+    _tituloController.removeListener(_onTextChanged);
+    _descripcionController.removeListener(_onTextChanged);
+    _puntosController.removeListener(_onTextChanged);
     _tituloController.dispose();
     _descripcionController.dispose();
     _puntosController.dispose();
@@ -69,30 +108,36 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
     super.dispose();
   }
 
+  void _onTextChanged() {
+    setState(() {});
+  }
+
   Future<void> _crearReto() async {
     if (_formKey.currentState?.validate() != true) {
       return;
     }
-
     if (_materiaSeleccionada == null) {
       setState(() {
         _error = 'Por favor selecciona una materia';
       });
       return;
     }
-
     if (_nivelSeleccionado == null) {
       setState(() {
         _error = 'Por favor selecciona un nivel';
       });
       return;
     }
-
+    if (_preguntas.isEmpty) {
+      setState(() {
+        _error = 'Agrega al menos una pregunta al reto';
+      });
+      return;
+    }
     setState(() {
       _isLoading = true;
       _error = null;
     });
-
     try {
       final resultado = await _db.createReto(
         token: widget.token,
@@ -104,8 +149,8 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
         nivel: _nivelSeleccionado!,
         materia: _materiaSeleccionada!,
         tenantId: "default",
+        preguntas: _preguntas.map((p) => p.toJson()).toList(),
       );
-
       if (resultado != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -175,7 +220,7 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
   }
 
   void _nextStep() {
-    if (_currentStep < 2) {
+    if (_currentStep < 3) {
       setState(() {
         _currentStep++;
       });
@@ -197,11 +242,12 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
   bool _canProceedToNext() {
     switch (_currentStep) {
       case 0:
-        // Descripción es opcional ahora
         return _tituloController.text.isNotEmpty &&
             _puntosController.text.isNotEmpty;
       case 1:
         return _materiaSeleccionada != null && _nivelSeleccionado != null;
+      case 2:
+        return _preguntas.isNotEmpty;
       default:
         return false;
     }
@@ -230,7 +276,7 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                for (int i = 0; i < 3; i++) ...[
+                for (int i = 0; i < 4; i++) ...[
                   Expanded(
                     child: Container(
                       height: 4,
@@ -282,7 +328,7 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
               child: ElevatedButton(
                 onPressed: _isLoading
                     ? null
-                    : (_currentStep == 2
+                    : (_currentStep == 3
                           ? _crearReto
                           : (_canProceedToNext() ? _nextStep : null)),
                 style: ElevatedButton.styleFrom(
@@ -304,7 +350,7 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
                         ),
                       )
                     : Text(
-                        _currentStep == 2 ? 'Crear Reto' : 'Siguiente',
+                        _currentStep == 3 ? 'Crear Reto' : 'Siguiente',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -326,10 +372,119 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
       case 1:
         return _buildConfigStep();
       case 2:
+        return _buildPreguntasStep();
+      case 3:
         return _buildReviewStep();
       default:
         return Container();
     }
+  }
+
+  Widget _buildPreguntasStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Preguntas del Reto',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Agrega preguntas que los estudiantes deberán responder para completar el reto.',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          ..._preguntas.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final pregunta = entry.value;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Pregunta ${idx + 1}: ${pregunta.enunciado}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              _preguntas.removeAt(idx);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tipo: ${pregunta.tipo == TipoPregunta.opcionMultiple ? 'Opción múltiple' : 'Respuesta corta'}',
+                    ),
+                    if (pregunta.tipo == TipoPregunta.opcionMultiple) ...[
+                      const SizedBox(height: 8),
+                      const Text('Opciones:'),
+                      ...pregunta.opciones.asMap().entries.map(
+                        (opt) => Row(
+                          children: [
+                            Radio<int>(
+                              value: opt.key,
+                              groupValue: pregunta.respuestaCorrecta,
+                              onChanged: null,
+                            ),
+                            Text(opt.value),
+                          ],
+                        ),
+                      ),
+                      if (pregunta.respuestaCorrecta != null)
+                        Text(
+                          'Respuesta correcta: ${pregunta.opciones[pregunta.respuestaCorrecta!]}',
+                          style: const TextStyle(color: Colors.green),
+                        ),
+                    ],
+                    if (pregunta.tipo == TipoPregunta.respuestaCorta &&
+                        pregunta.respuestaCorta != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          'Respuesta esperada: ${pregunta.respuestaCorta!}',
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.add),
+            label: const Text('Agregar pregunta'),
+            onPressed: () async {
+              final nueva = await showDialog<PreguntaFormulario>(
+                context: context,
+                builder: (context) => _DialogAgregarPregunta(),
+              );
+              if (nueva != null) {
+                setState(() {
+                  _preguntas.add(nueva);
+                });
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildInfoStep() {
@@ -677,6 +832,56 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
                   Icons.star,
                   color: Colors.amber,
                 ),
+                const Divider(height: 32),
+                const Text(
+                  'Preguntas:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                ..._preguntas.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final pregunta = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Pregunta ${idx + 1}: ${pregunta.enunciado}'),
+                        Text(
+                          'Tipo: ${pregunta.tipo == TipoPregunta.opcionMultiple ? 'Opción múltiple' : 'Respuesta corta'}',
+                        ),
+                        if (pregunta.tipo == TipoPregunta.opcionMultiple) ...[
+                          const SizedBox(height: 4),
+                          const Text('Opciones:'),
+                          ...pregunta.opciones.asMap().entries.map(
+                            (opt) => Row(
+                              children: [
+                                Radio<int>(
+                                  value: opt.key,
+                                  groupValue: pregunta.respuestaCorrecta,
+                                  onChanged: null,
+                                ),
+                                Text(opt.value),
+                              ],
+                            ),
+                          ),
+                          if (pregunta.respuestaCorrecta != null)
+                            Text(
+                              'Respuesta correcta: ${pregunta.opciones[pregunta.respuestaCorrecta!]}',
+                              style: const TextStyle(color: Colors.green),
+                            ),
+                        ],
+                        if (pregunta.tipo == TipoPregunta.respuestaCorta &&
+                            pregunta.respuestaCorta != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              'Respuesta esperada: ${pregunta.respuestaCorta!}',
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -731,7 +936,192 @@ class _CrearRetoScreenState extends State<CrearRetoScreen>
       ),
     );
   }
+}
 
+// Diálogo para agregar pregunta
+class _DialogAgregarPregunta extends StatefulWidget {
+  @override
+  State<_DialogAgregarPregunta> createState() => _DialogAgregarPreguntaState();
+}
+
+class _DialogAgregarPreguntaState extends State<_DialogAgregarPregunta> {
+  final _enunciadoController = TextEditingController();
+  TipoPregunta _tipo = TipoPregunta.opcionMultiple;
+  List<TextEditingController> _opcionesControllers = [
+    TextEditingController(),
+    TextEditingController(),
+  ];
+  int? _respuestaCorrecta;
+  final _respuestaCortaController = TextEditingController();
+
+  @override
+  void dispose() {
+    _enunciadoController.dispose();
+    for (var c in _opcionesControllers) {
+      c.dispose();
+    }
+    _respuestaCortaController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Agregar pregunta'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _enunciadoController,
+              decoration: const InputDecoration(
+                labelText: 'Enunciado de la pregunta',
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Tipo de pregunta:'),
+            Row(
+              children: [
+                Radio<TipoPregunta>(
+                  value: TipoPregunta.opcionMultiple,
+                  groupValue: _tipo,
+                  onChanged: (v) {
+                    setState(() {
+                      _tipo = v!;
+                    });
+                  },
+                ),
+                const Text('Opción múltiple'),
+                Radio<TipoPregunta>(
+                  value: TipoPregunta.respuestaCorta,
+                  groupValue: _tipo,
+                  onChanged: (v) {
+                    setState(() {
+                      _tipo = v!;
+                    });
+                  },
+                ),
+                const Text('Respuesta corta'),
+              ],
+            ),
+            if (_tipo == TipoPregunta.opcionMultiple) ...[
+              const SizedBox(height: 12),
+              const Text('Opciones:'),
+              ..._opcionesControllers.asMap().entries.map((entry) {
+                final idx = entry.key;
+                return Row(
+                  children: [
+                    Radio<int>(
+                      value: idx,
+                      groupValue: _respuestaCorrecta,
+                      onChanged: (v) {
+                        setState(() {
+                          _respuestaCorrecta = v;
+                        });
+                      },
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: entry.value,
+                        decoration: InputDecoration(
+                          labelText: 'Opción ${idx + 1}',
+                        ),
+                      ),
+                    ),
+                    if (_opcionesControllers.length > 2)
+                      IconButton(
+                        icon: const Icon(
+                          Icons.remove_circle,
+                          color: Colors.red,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _opcionesControllers.removeAt(idx);
+                            if (_respuestaCorrecta != null &&
+                                _respuestaCorrecta == idx) {
+                              _respuestaCorrecta = null;
+                            } else if (_respuestaCorrecta != null &&
+                                _respuestaCorrecta! > idx) {
+                              _respuestaCorrecta = _respuestaCorrecta! - 1;
+                            }
+                          });
+                        },
+                      ),
+                  ],
+                );
+              }),
+              TextButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('Agregar opción'),
+                onPressed: () {
+                  setState(() {
+                    _opcionesControllers.add(TextEditingController());
+                  });
+                },
+              ),
+            ],
+            if (_tipo == TipoPregunta.respuestaCorta) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _respuestaCortaController,
+                decoration: const InputDecoration(
+                  labelText: 'Respuesta esperada',
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final enunciado = _enunciadoController.text.trim();
+            if (enunciado.isEmpty) return;
+            if (_tipo == TipoPregunta.opcionMultiple) {
+              final opciones = _opcionesControllers
+                  .map((c) => c.text.trim())
+                  .where((t) => t.isNotEmpty)
+                  .toList();
+              if (opciones.length < 2 ||
+                  _respuestaCorrecta == null ||
+                  _respuestaCorrecta! >= opciones.length)
+                return;
+              Navigator.pop(
+                context,
+                PreguntaFormulario(
+                  enunciado: enunciado,
+                  tipo: TipoPregunta.opcionMultiple,
+                  opciones: opciones,
+                  respuestaCorrecta: _respuestaCorrecta,
+                ),
+              );
+            } else {
+              final resp = _respuestaCortaController.text.trim();
+              if (resp.isEmpty) return;
+              Navigator.pop(
+                context,
+                PreguntaFormulario(
+                  enunciado: enunciado,
+                  tipo: TipoPregunta.respuestaCorta,
+                  respuestaCorta: resp,
+                ),
+              );
+            }
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+
+// Mover los widgets auxiliares a _CrearRetoScreenState
+extension _CrearRetoScreenStateHelpers on _CrearRetoScreenState {
   Widget _buildReviewItem(
     String label,
     String value,

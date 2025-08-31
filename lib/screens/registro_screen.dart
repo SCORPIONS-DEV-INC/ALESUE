@@ -370,7 +370,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 const SizedBox(height: 16),
                 // Campo sexo como dropdown mejorado
                 DropdownButtonFormField<String>(
-                  value: _sexoSeleccionado,
+                  initialValue: _sexoSeleccionado,
                   items: const [
                     DropdownMenuItem(
                       value: 'Masculino',

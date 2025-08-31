@@ -114,7 +114,7 @@ class _RankingScreenState extends State<RankingScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: _materiaSeleccionada,
+                        initialValue: _materiaSeleccionada,
                         decoration: const InputDecoration(
                           labelText: 'Filtrar por materia',
                           border: OutlineInputBorder(),

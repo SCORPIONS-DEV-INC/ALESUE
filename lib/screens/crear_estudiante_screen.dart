@@ -256,7 +256,7 @@ class _CrearEstudianteScreenState extends State<CrearEstudianteScreen> {
 
               // Sexo
               DropdownButtonFormField<String>(
-                value: _sexoSeleccionado,
+                initialValue: _sexoSeleccionado,
                 decoration: const InputDecoration(
                   labelText: 'Sexo',
                   border: OutlineInputBorder(),

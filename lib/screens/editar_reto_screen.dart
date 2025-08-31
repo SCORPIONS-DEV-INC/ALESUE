@@ -365,7 +365,7 @@ class _EditarRetoScreenState extends State<EditarRetoScreen> {
             border: Border.all(color: Colors.grey[300]!),
           ),
           child: DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             decoration: InputDecoration(
               hintText: hint,
               prefixIcon: Icon(icon, color: Colors.blue),

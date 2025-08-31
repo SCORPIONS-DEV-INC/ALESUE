@@ -247,7 +247,7 @@ class _RegistroProfesorScreenState extends State<RegistroProfesorScreen> {
 
                 // Sexo
                 DropdownButtonFormField<String>(
-                  value: _sexoSeleccionado,
+                  initialValue: _sexoSeleccionado,
                   items: const [
                     DropdownMenuItem(
                       value: 'Masculino',

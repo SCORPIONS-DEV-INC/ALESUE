@@ -7,7 +7,7 @@ import 'dart:convert';
 class PerfilScreen extends StatefulWidget {
   final Map<String, dynamic> userInfo;
 
-  const PerfilScreen({Key? key, required this.userInfo}) : super(key: key);
+  const PerfilScreen({super.key, required this.userInfo});
 
   @override
   State<PerfilScreen> createState() => _PerfilScreenState();
